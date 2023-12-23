@@ -42,7 +42,7 @@ def visit_with_user_config(user_config):
       create_naver_session_and_visit(user["id"], user["pw"])
 
 def create_naver_session_and_visit(id, pw):
-    print("[INFO] Creating a naver session and visit pages with ID:", id)
+    print("[INFO] Creating a naver session and visit pages with ID:", id, flush=True)
     s = naver_session(id, pw)
     campaign_links = find_naver_campaign_links(base_url)
     if(campaign_links == []):
