@@ -41,10 +41,11 @@ def visit_with_user_config(user_config):
     for user in users:
       create_naver_session_and_visit(user["id"], user["pw"])
 
+
 def create_naver_session_and_visit(id, pw):
     print("[INFO] Creating a naver session and visit pages with ID:", id, flush=True)
     s = naver_session(id, pw)
-    campaign_links = find_naver_campaign_links(base_url)
+    campaign_links = find_naver_campaign_links(base_url, key_for_visited_urls_file_path=id)
     if(campaign_links == []):
         print("모든 링크를 방문했습니다.")
     for link in campaign_links:
@@ -116,10 +117,16 @@ def naver_session(nid, npw):
     return s
 
 
-def find_naver_campaign_links(base_url, visited_urls_file='visited_urls.txt'):
+def get_full_visited_urls_file_path(key_for_visited_urls_file_path):
+    full_visited_urls_file_path=('visited_urls.%s.txt') % (key_for_visited_urls_file_path)
+    return full_visited_urls_file_path
+
+
+def find_naver_campaign_links(base_url, key_for_visited_urls_file_path='default'):
+    full_visited_urls_file_path = get_full_visited_urls_file_path(key_for_visited_urls_file_path)
     # Read visited URLs from file
     try:
-        with open(visited_urls_file, 'r') as file:
+        with open(full_visited_urls_file_path, 'r') as file:
             visited_urls = set(file.read().splitlines())
     except FileNotFoundError:
         visited_urls = set()
@@ -157,7 +164,7 @@ def find_naver_campaign_links(base_url, visited_urls_file='visited_urls.txt'):
         visited_urls.add(full_link)
 
         # Save the updated visited URLs to the file
-        with open(visited_urls_file, 'w') as file:
+        with open(full_visited_urls_file_path, 'w') as file:
             for url in visited_urls:
                 file.write(url + '\n')
 
