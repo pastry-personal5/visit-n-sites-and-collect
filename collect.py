@@ -35,27 +35,28 @@ def read_user_config():
         return dict()
     return user_config
   
-
+# It assumes that `user_config` is valid. It does not check validity of `user_config`.
 def visit_with_user_config(user_config):
     users = user_config["users"]
     for user in users:
       create_naver_session_and_visit(user["id"], user["pw"])
 
 
+# It creates a naver session and visit campaign links.
+# 적립 확인 링크 - https://new-m.pay.naver.com/pointshistory/list?category=all
 def create_naver_session_and_visit(id, pw):
     print("[INFO] Creating a naver session and visit pages with ID:", id, flush=True)
     s = naver_session(id, pw)
     campaign_links = find_naver_campaign_links(base_url, key_for_visited_urls_file_path=id)
     if(campaign_links == []):
-        print("모든 링크를 방문했습니다.")
+        print("All campaign links were visited.")
+        return
     for link in campaign_links:
         response = s.get(link)
         print(response.text) # for debugging
         response.raise_for_status()
         time.sleep(5)
-        print("캠페인 URL : " + link)
-
-# 적립 확인 링크 - https://new-m.pay.naver.com/pointshistory/list?category=all
+        print("Campaign URL : " + link)
 
 
 def encrypt(key_str, uid, upw):
@@ -122,14 +123,26 @@ def get_full_visited_urls_file_path(key_for_visited_urls_file_path):
     return full_visited_urls_file_path
 
 
-def find_naver_campaign_links(base_url, key_for_visited_urls_file_path='default'):
-    full_visited_urls_file_path = get_full_visited_urls_file_path(key_for_visited_urls_file_path)
+def read_visited_urls_from_file(file_path):
     # Read visited URLs from file
     try:
-        with open(full_visited_urls_file_path, 'r') as file:
+        with open(file_path, 'r') as file:
             visited_urls = set(file.read().splitlines())
     except FileNotFoundError:
         visited_urls = set()
+    return visited_urls
+
+
+def write_visited_urls_to_file(file_path, visited_urls):
+    # Save the updated visited URLs to the file
+    with open(file_path, 'w') as file:
+        for url in visited_urls:
+            file.write(url + '\n')
+
+
+def find_naver_campaign_links(base_url, key_for_visited_urls_file_path='default'):
+    full_visited_urls_file_path = get_full_visited_urls_file_path(key_for_visited_urls_file_path)
+    visited_urls = read_visited_urls_from_file(full_visited_urls_file_path)
 
     # Send a request to the base URL
     response = requests.get(base_url)
@@ -162,11 +175,7 @@ def find_naver_campaign_links(base_url, key_for_visited_urls_file_path='default'
 
         # Add the visited link to the set
         visited_urls.add(full_link)
-
-        # Save the updated visited URLs to the file
-        with open(full_visited_urls_file_path, 'w') as file:
-            for url in visited_urls:
-                file.write(url + '\n')
+        write_visited_urls_to_file(full_visited_urls_file_path, visited_urls) 
 
     return campaign_links
 
