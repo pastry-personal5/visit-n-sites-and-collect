@@ -47,16 +47,23 @@ def visit_with_user_config(user_config):
 def create_naver_session_and_visit(id, pw):
     print("[INFO] Creating a naver session and visit pages with ID:", id, flush=True)
     s = naver_session(id, pw)
-    campaign_links = find_naver_campaign_links(base_url, key_for_visited_urls_file_path=id)
-    if(campaign_links == []):
-        print("All campaign links were visited.")
-        return
-    for link in campaign_links:
-        response = s.get(link)
-        print(response.text) # for debugging
-        response.raise_for_status()
-        time.sleep(5)
-        print("Campaign URL : " + link)
+    TARGET_BASE_URL_LIST = [
+       # The base URL to start with
+        "https://www.clien.net/service/board/jirum",
+        "https://www.clien.net/service/board/park"
+    ]
+    for base_url in TARGET_BASE_URL_LIST:
+        print("[INFO] Visiting:", base_url, flush=True)
+        campaign_links = find_naver_campaign_links(base_url, key_for_visited_urls_file_path=id)
+        if(campaign_links == []):
+            print("[INFO] All campaign links were visited.")
+            continue
+        for link in campaign_links:
+            response = s.get(link)
+            print(response.text) # for debugging
+            response.raise_for_status()
+            time.sleep(5)
+            print("Campaign URL : " + link)
 
 
 def encrypt(key_str, uid, upw):
@@ -178,10 +185,6 @@ def find_naver_campaign_links(base_url, key_for_visited_urls_file_path='default'
         write_visited_urls_to_file(full_visited_urls_file_path, visited_urls) 
 
     return campaign_links
-
-# The base URL to start with
-base_url = "https://www.clien.net/service/board/jirum"
-#base_url = "https://www.clien.net/service/board/park"
 
 
 if __name__ == "__main__":
