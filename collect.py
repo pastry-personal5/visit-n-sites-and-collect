@@ -1,6 +1,8 @@
-import pprint
 import re
+import time
+from urllib.parse import urljoin
 import uuid
+
 import requests
 import rsa
 import lzstring
@@ -11,9 +13,45 @@ except ImportError:
     from yaml import Loader, Dumper
 from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
-import time
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin
+
+
+class LinkRecorder:
+    visited_links = set()
+    nid = None
+
+    def __init__(self, nid):
+        self.nid = nid
+
+    def is_visited(self, url):
+        return url in self.visited_links
+
+    def add_link(self, url):
+        self.visited_links.add(url)
+
+    def get_visited_urls(self):
+        return self.visited_links
+
+    def get_full_visited_urls_file_path(self):
+        full_visited_urls_file_path = f'visited_urls.{self.nid}.txt'
+        return full_visited_urls_file_path
+
+    def read_visited_urls_from_file(self):
+        file_path = self.get_full_visited_urls_file_path()
+        # Read visited URLs from file
+        try:
+            with open(file_path, 'r', encoding='utf-8') as file:
+                self.visited_links = set(file.read().splitlines())
+        except FileNotFoundError:
+            self.visited_links = set()
+        return self.visited_links
+
+    def write_visited_urls_to_file(self):
+        # Save the updated visited URLs to the file
+        file_path = self.get_full_visited_urls_file_path()
+        with open(file_path, 'w', encoding='utf-8') as file:
+            for url in self.visited_links:
+                file.write(url + '\n')
 
 
 def main():
@@ -21,7 +59,7 @@ def main():
     if not user_config:
         print("The config file is not valid.")
         exit(-1)
-    
+
     visit_with_user_config(user_config)
 
 
@@ -31,36 +69,52 @@ def read_user_config():
         f = open(config_file_name, "r", encoding="utf-8")
         user_config = yaml.load(f.read(), Loader=Loader)
     except IOError:
-        print("Could not read file:", config_file_name)        
-        return dict()
+        print("Could not read file:", config_file_name)
+        return {}
     return user_config
-  
+
+
 # It assumes that `user_config` is valid. It does not check validity of `user_config`.
 def visit_with_user_config(user_config):
     users = user_config["users"]
     for user in users:
-      create_naver_session_and_visit(user["id"], user["pw"])
+        create_naver_session_and_visit(user["id"], user["pw"])
+
+
+def prepare_visit(link_recorder):
+    link_recorder.read_visited_urls_from_file()
+
+
+def finish_visit(link_recorder):
+    link_recorder.write_visited_urls_to_file()
 
 
 # It creates a naver session and visit campaign links.
 # 적립 확인 링크 - https://new-m.pay.naver.com/pointshistory/list?category=all
-def create_naver_session_and_visit(id, pw):
-    print("[INFO] Creating a naver session and visit pages with ID:", id, flush=True)
-    s = naver_session(id, pw)
+def create_naver_session_and_visit(nid, npw):
+    print("[INFO] Creating a naver session and visit pages with ID:", nid, flush=True)
+    s = naver_session(nid, npw)
+    link_recorder = LinkRecorder(nid)
+    prepare_visit(link_recorder)
+    visit(s, link_recorder)
+    finish_visit(link_recorder)
+
+
+def visit(session, link_recorder):
     TARGET_BASE_URL_LIST = [
-       # The base URL to start with
+        # The base URL to start with
         "https://www.clien.net/service/board/jirum",
         "https://www.clien.net/service/board/park"
     ]
     for base_url in TARGET_BASE_URL_LIST:
         print("[INFO] Visiting:", base_url, flush=True)
-        campaign_links = find_naver_campaign_links(base_url, key_for_visited_urls_file_path=id)
-        if(campaign_links == []):
+        campaign_links = find_naver_campaign_links(link_recorder, base_url)
+        if not campaign_links:
             print("[INFO] All campaign links were visited.")
             continue
         for link in campaign_links:
-            response = s.get(link)
-            print(response.text) # for debugging
+            response = session.get(link)
+            print(response.text)  # for debugging
             response.raise_for_status()
             time.sleep(5)
             print("Campaign URL : " + link)
@@ -101,9 +155,9 @@ def naver_session(nid, npw):
     }
 
     bvsd_uuid = uuid.uuid4()
-    encData = '{"a":"%s-4","b":"1.3.4","d":[{"i":"id","b":{"a":["0,%s"]},"d":"%s","e":false,"f":false},{"i":"%s","e":true,"f":false}],"h":"1f","i":{"a":"Mozilla/5.0"}}' % (
+    enc_data = '{"a":"%s-4","b":"1.3.4","d":[{"i":"id","b":{"a":["0,%s"]},"d":"%s","e":false,"f":false},{"i":"%s","e":true,"f":false}],"h":"1f","i":{"a":"Mozilla/5.0"}}' % (
         bvsd_uuid, nid, nid, npw)
-    bvsd = '{"uuid":"%s","encData":"%s"}' % (bvsd_uuid, lzstring.LZString.compressToEncodedURIComponent(encData))
+    bvsd = '{"uuid":"%s","encData":"%s"}' % (bvsd_uuid, lzstring.LZString.compressToEncodedURIComponent(enc_data))
 
     resp = s.post('https://nid.naver.com/nidlogin.login', data={
         'svctype': '0',
@@ -115,8 +169,7 @@ def naver_session(nid, npw):
         'encpw': encpw,
         'bvsd': bvsd
         }, headers=request_headers)
-        
-        
+
     print(resp.content)
 
     finalize_url = re.search(r'location\.replace\("([^"]+)"\)', resp.content.decode("utf-8")).group(1)
@@ -125,32 +178,7 @@ def naver_session(nid, npw):
     return s
 
 
-def get_full_visited_urls_file_path(key_for_visited_urls_file_path):
-    full_visited_urls_file_path=('visited_urls.%s.txt') % (key_for_visited_urls_file_path)
-    return full_visited_urls_file_path
-
-
-def read_visited_urls_from_file(file_path):
-    # Read visited URLs from file
-    try:
-        with open(file_path, 'r') as file:
-            visited_urls = set(file.read().splitlines())
-    except FileNotFoundError:
-        visited_urls = set()
-    return visited_urls
-
-
-def write_visited_urls_to_file(file_path, visited_urls):
-    # Save the updated visited URLs to the file
-    with open(file_path, 'w') as file:
-        for url in visited_urls:
-            file.write(url + '\n')
-
-
-def find_naver_campaign_links(base_url, key_for_visited_urls_file_path='default'):
-    full_visited_urls_file_path = get_full_visited_urls_file_path(key_for_visited_urls_file_path)
-    visited_urls = read_visited_urls_from_file(full_visited_urls_file_path)
-
+def find_naver_campaign_links(link_recorder, base_url):
     # Send a request to the base URL
     response = requests.get(base_url)
     soup = BeautifulSoup(response.text, 'html.parser')
@@ -169,7 +197,7 @@ def find_naver_campaign_links(base_url, key_for_visited_urls_file_path='default'
     # Check each Naver link
     for link in naver_links:
         full_link = urljoin(base_url, link)
-        if full_link in visited_urls:
+        if link_recorder.is_visited(full_link):
             continue  # Skip already visited links
 
         res = requests.get(full_link)
@@ -181,8 +209,7 @@ def find_naver_campaign_links(base_url, key_for_visited_urls_file_path='default'
                 campaign_links.append(a_tag['href'])
 
         # Add the visited link to the set
-        visited_urls.add(full_link)
-        write_visited_urls_to_file(full_visited_urls_file_path, visited_urls) 
+        link_recorder.add_link(full_link)
 
     return campaign_links
 
