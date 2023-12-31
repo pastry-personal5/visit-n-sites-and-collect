@@ -5,7 +5,7 @@ The source code is derived from an article in https://www.clien.net.
 The original author is unknown.
 Please visit and find the original author. i.e. https://www.clien.net/service/board/kin/18490638
 Please look for `LICENSE` file for license.
-Please beaware of file encoding.
+Please beware of file encoding.
 """
 import re
 import sys
