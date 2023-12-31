@@ -1,4 +1,14 @@
+"""
+This module visits Naver Pay's advertisement sites or campaign links.
+And it collects a small amount of money.
+The source code is derived from an article in https://www.clien.net.
+The original author is unknown.
+Please visit and find the original author. i.e. https://www.clien.net/service/board/kin/18490638
+Please look for `LICENSE` file for license.
+Please beaware of file encoding.
+"""
 import re
+import sys
 import time
 from urllib.parse import urljoin
 import uuid
@@ -15,18 +25,20 @@ from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
 from bs4 import BeautifulSoup
 
-
+# `LinkRecorder` records visited links or URLs.
+# Visited links belong to nid or Naver user ID.
 class LinkRecorder:
     visited_links = set()
     nid = None
 
-    def __init__(self, nid):
+    # nid means Naver user ID.
+    def __init__(self, nid: str):
         self.nid = nid
 
-    def is_visited(self, url):
+    def is_visited(self, url: str):
         return url in self.visited_links
 
-    def add_link(self, url):
+    def add_link(self, url: str):
         self.visited_links.add(url)
 
     def get_visited_urls(self):
@@ -58,7 +70,7 @@ def main():
     user_config = read_user_config()
     if not user_config:
         print("The config file is not valid.")
-        exit(-1)
+        sys.exit(-1)
 
     visit_with_user_config(user_config)
 
@@ -89,7 +101,7 @@ def finish_visit(link_recorder):
     link_recorder.write_visited_urls_to_file()
 
 
-# It creates a naver session and visit campaign links.
+# It creates a Naver session and visit campaign links.
 # 적립 확인 링크 - https://new-m.pay.naver.com/pointshistory/list?category=all
 def create_naver_session_and_visit(nid, npw):
     print("[INFO] Creating a naver session and visit pages with ID:", nid, flush=True)
