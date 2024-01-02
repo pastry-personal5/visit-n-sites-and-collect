@@ -81,7 +81,7 @@ def read_user_config():
         f = open(config_file_name, "r", encoding="utf-8")
         user_config = yaml.load(f.read(), Loader=Loader)
     except IOError:
-        print("Could not read file:", config_file_name)
+        print("[ERROR] Could not read file:", config_file_name)
         return {}
     return user_config
 
@@ -106,6 +106,9 @@ def finish_visit(link_recorder):
 def create_naver_session_and_visit(nid, npw):
     print("[INFO] Creating a naver session and visit pages with ID:", nid, flush=True)
     s = naver_session(nid, npw)
+    if not s:
+        print("[ERROR] Could not sign in with an ID: ", nid)
+        return
     link_recorder = LinkRecorder(nid)
     prepare_visit(link_recorder)
     visit(s, link_recorder)
@@ -184,9 +187,11 @@ def naver_session(nid, npw):
 
     print(resp.content)
 
-    finalize_url = re.search(r'location\.replace\("([^"]+)"\)', resp.content.decode("utf-8")).group(1)
-    s.get(finalize_url)
-
+    result = re.search(r'location\.replace\("([^"]+)"\)', resp.content.decode("utf-8"))
+    if not result:
+        return None
+    final_url = result.group(1)
+    s.get(final_url)
     return s
 
 
