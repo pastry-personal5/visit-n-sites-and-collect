@@ -7,23 +7,22 @@ Please visit and find the original author. i.e. https://www.clien.net/service/bo
 Please look for `LICENSE` file for license.
 Please beware of file encoding.
 """
-import re
 import sys
 import time
 from urllib.parse import urljoin
-import uuid
 
 import requests
-import rsa
-import lzstring
+from selenium import common as SC
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
 import yaml
 try:
-    from yaml import CLoader as Loader, CDumper as Dumper
+    from yaml import CLoader as Loader
 except ImportError:
-    from yaml import Loader, Dumper
-from urllib3.util.retry import Retry
-from requests.adapters import HTTPAdapter
+    from yaml import Loader
 from bs4 import BeautifulSoup
+
 
 # `LinkRecorder` records visited links or URLs.
 # Visited links belong to nid or Naver user ID.
@@ -66,6 +65,17 @@ class LinkRecorder:
                 file.write(url + '\n')
 
 
+class LinkVisitorContext:
+    driver = None  # It's a Selenium driver.
+
+    def __init__(self):
+        self.driver = None
+
+    def clean_up(self):
+        if self.driver:
+            self.driver.quit()
+
+
 def main():
     user_config = read_user_config()
     if not user_config:
@@ -101,21 +111,68 @@ def finish_visit(link_recorder):
     link_recorder.write_visited_urls_to_file()
 
 
+def create_link_visitor_context_with_selenium(nid, npw):
+    driver = webdriver.Chrome()
+    driver.implicitly_wait(0.5)
+
+    context = LinkVisitorContext()
+    context.driver = driver
+
+    visit_login_page(driver, nid, npw)
+
+    return context
+
+
+def visit_login_page(driver, nid, npw):
+    driver.get("https://new-m.pay.naver.com/pcpay?page=1")
+    title = driver.title
+    print(f'title (%s)' % title)
+
+    element_for_id = driver.find_element(by=By.ID, value="id")
+    element_for_password = driver.find_element(by=By.ID, value="pw")
+    element_for_submission = driver.find_element(by=By.ID, value="log.login")
+
+    element_for_id.send_keys(nid)
+    element_for_password.send_keys(npw)
+
+    element_for_submission.click()
+
+    input('Please input anything to continue...')
+    title = driver.title
+    print(f'title (%s)' % title)
+
+    try:
+        element_for_registering_device = driver.find_element(by=By.ID, value="new.save")
+        if element_for_registering_device:
+            element_for_registering_device.click()
+            input('Please input anything to continue...')
+            title = driver.title
+            print(f'title (%s)' % title)
+    except SC.exceptions.NoSuchElementException:
+        pass
+
+
+def create_link_visitor_context(nid, npw):
+    context = create_link_visitor_context_with_selenium(nid, npw)
+    return context
+
+
 # It creates a Naver session and visit campaign links.
 # 적립 확인 링크 - https://new-m.pay.naver.com/pointshistory/list?category=all
 def create_naver_session_and_visit(nid, npw):
     print("[INFO] Creating a naver session and visit pages with ID:", nid, flush=True)
-    s = naver_session(nid, npw)
-    if not s:
+    context = create_link_visitor_context(nid, npw)
+    if not context:
         print("[ERROR] Could not sign in with an ID: ", nid)
         return
     link_recorder = LinkRecorder(nid)
     prepare_visit(link_recorder)
-    visit(s, link_recorder)
+    visit(context, link_recorder)
     finish_visit(link_recorder)
+    context.clean_up()
 
 
-def visit(session, link_recorder):
+def visit(link_visitor_context, link_recorder):
     TARGET_BASE_URL_LIST = [
         # The base URL to start with
         "https://www.clien.net/service/board/jirum",
@@ -128,71 +185,18 @@ def visit(session, link_recorder):
             print("[INFO] All campaign links were visited.")
             continue
         for link in campaign_links:
-            response = session.get(link)
-            print(response.text)  # for debugging
-            response.raise_for_status()
+            try:
+                print("[INFO] Visiting a campaign link: ", link, flush=True)
+                link_visitor_context.driver.get(link)
+                if EC.alert_is_present():
+                    try:
+                        link_visitor_context.driver.switch_to.alert.accept()
+                    except SC.exceptions.NoAlertPresentException:
+                        pass
+            except SC.exceptions.UnexpectedAlertPresentException:
+                pass
+
             time.sleep(5)
-            print("Campaign URL : " + link)
-
-
-def encrypt(key_str, uid, upw):
-    def naver_style_join(l):
-        return ''.join([chr(len(s)) + s for s in l])
-
-    sessionkey, keyname, e_str, n_str = key_str.split(',')
-    e, n = int(e_str, 16), int(n_str, 16)
-
-    message = naver_style_join([sessionkey, uid, upw]).encode()
-
-    pubkey = rsa.PublicKey(e, n)
-    encrypted = rsa.encrypt(message, pubkey)
-
-    return keyname, encrypted.hex()
-
-
-def encrypt_account(uid, upw):
-    key_str = requests.get('https://nid.naver.com/login/ext/keys.nhn').content.decode("utf-8")
-    return encrypt(key_str, uid, upw)
-
-
-def naver_session(nid, npw):
-    encnm, encpw = encrypt_account(nid, npw)
-
-    s = requests.Session()
-    retries = Retry(
-        total=5,
-        backoff_factor=0.1,
-        status_forcelist=[500, 502, 503, 504]
-    )
-    s.mount('https://', HTTPAdapter(max_retries=retries))
-    request_headers = {
-        'User-agent': 'Mozilla/5.0'
-    }
-
-    bvsd_uuid = uuid.uuid4()
-    enc_data = '{"a":"%s-4","b":"1.3.4","d":[{"i":"id","b":{"a":["0,%s"]},"d":"%s","e":false,"f":false},{"i":"%s","e":true,"f":false}],"h":"1f","i":{"a":"Mozilla/5.0"}}' % (
-        bvsd_uuid, nid, nid, npw)
-    bvsd = '{"uuid":"%s","encData":"%s"}' % (bvsd_uuid, lzstring.LZString.compressToEncodedURIComponent(enc_data))
-
-    resp = s.post('https://nid.naver.com/nidlogin.login', data={
-        'svctype': '0',
-        'enctp': '1',
-        'encnm': encnm,
-        'enc_url': 'http0X0.0000000000001P-10220.0000000.000000www.naver.com',
-        'url': 'www.naver.com',
-        'smart_level': '1',
-        'encpw': encpw,
-        'bvsd': bvsd
-        }, headers=request_headers)
-
-    print(resp.content)
-
-    result = re.search(r'location\.replace\("([^"]+)"\)', resp.content.decode("utf-8"))
-    if not result:
-        return None
-    final_url = result.group(1)
-    s.get(final_url)
-    return s
 
 
 def find_naver_campaign_links(link_recorder, base_url):
