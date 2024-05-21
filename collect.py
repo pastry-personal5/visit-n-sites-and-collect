@@ -23,6 +23,8 @@ except ImportError:
     from yaml import Loader
 from bs4 import BeautifulSoup
 
+import link_publisher
+
 
 # `LinkRecorder` records visited links or URLs.
 # Visited links belong to nid or Naver user ID.
@@ -167,18 +169,15 @@ def create_naver_session_and_visit(nid, npw):
         return
     link_recorder = LinkRecorder(nid)
     prepare_visit(link_recorder)
-    visit(context, link_recorder)
+    base_urls = link_publisher.generate_urls_based_on_config(nid)
+    visit(base_urls, context, link_recorder)
+    link_publisher.record_sucessful_visit(nid)
     finish_visit(link_recorder)
     context.clean_up()
 
 
-def visit(link_visitor_context, link_recorder):
-    TARGET_BASE_URL_LIST = [
-        # The base URL to start with
-        "https://www.clien.net/service/board/jirum",
-        "https://www.clien.net/service/board/park"
-    ]
-    for base_url in TARGET_BASE_URL_LIST:
+def visit(base_urls, link_visitor_context, link_recorder):
+    for base_url in base_urls:
         print("[INFO] Visiting:", base_url, flush=True)
         campaign_links = find_naver_campaign_links(link_recorder, base_url)
         if not campaign_links:
