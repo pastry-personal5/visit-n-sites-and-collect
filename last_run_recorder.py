@@ -3,14 +3,15 @@ import datetime
 import collector_cookie
 
 
-def read_last_run(nid):
-    config = collector_cookie.read_link_publisher_config(nid)
-    if config:
-        the_day_of_last_run = datetime.date.fromisoformat(config)
-        return the_day_of_last_run
+def read_date_of_last_run(nid):
+    cookie = collector_cookie.read_cookie(nid)
+    if cookie:
+        date_of_last_run = cookie.date_of_last_run
+        return date_of_last_run
     else:
         return -1
 
 
-def write_last_run(nid):
-    collector_cookie.write_link_publisher_config(nid)
+def write_date_of_last_run(nid):
+    cookie = collector_cookie.CollectorCookie(nid, datetime.date.today())
+    collector_cookie.write_cookie(cookie)

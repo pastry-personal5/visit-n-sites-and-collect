@@ -44,10 +44,10 @@ def create_publisher_urls_to_visit_based_on_last_page_index(last_page_index):
 def create_publisher_urls_to_visit(nid):
     MAX_PAGE_INDEX = 10
     last_page_index = MAX_PAGE_INDEX
-    the_day_of_last_run = last_run_recorder.read_last_run(nid)
-    if the_day_of_last_run != -1:
+    date_of_last_run = last_run_recorder.read_date_of_last_run(nid)
+    if date_of_last_run != -1:
         today = datetime.date.today()
-        days = (today - the_day_of_last_run).days
+        days = (today - date_of_last_run).days
         print(f'[INFO] The day difference was (%d).' % (days))
         last_page_index = calculate_last_page_index(days)
     else:
@@ -59,4 +59,4 @@ def create_publisher_urls_to_visit(nid):
 
 
 def record_successful_visit(nid):
-    last_run_recorder.write_last_run(nid)
+    last_run_recorder.write_date_of_last_run(nid)

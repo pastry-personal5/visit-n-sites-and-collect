@@ -23,7 +23,6 @@ except ImportError:
     from yaml import Loader
 from bs4 import BeautifulSoup
 
-import last_run_recorder
 import publisher
 
 
@@ -127,6 +126,13 @@ def create_link_visitor_client_context_with_selenium(nid, npw):
     return client_context
 
 
+def get_continue_command_from_user():
+    while True:
+        ch = input('Please input \'c\' to continue...')
+        if ch == 'c':
+            return
+
+
 def visit_login_page(driver, nid, npw):
     driver.get("https://new-m.pay.naver.com/pcpay?page=1")
     title = driver.title
@@ -141,7 +147,7 @@ def visit_login_page(driver, nid, npw):
 
     element_for_submission.click()
 
-    input('Please input anything to continue...')
+    get_continue_command_from_user()
     title = driver.title
     print(f'title (%s)' % title)
 
@@ -149,7 +155,7 @@ def visit_login_page(driver, nid, npw):
         element_for_registering_device = driver.find_element(by=By.ID, value="new.save")
         if element_for_registering_device:
             element_for_registering_device.click()
-            input('Please input anything to continue...')
+            get_continue_command_from_user()
             title = driver.title
             print(f'title (%s)' % title)
     except SC.exceptions.NoSuchElementException:
