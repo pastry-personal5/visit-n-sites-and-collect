@@ -1,6 +1,6 @@
 import datetime
 
-import link_publisher_config
+import last_run_recorder
 
 
 def calculate_last_page_index(days):
@@ -13,7 +13,7 @@ def calculate_last_page_index(days):
     return last_page_index
 
 
-def create_url_list(last_page_index):
+def create_publisher_urls_to_visit_based_on_last_page_index(last_page_index):
     TARGET_BASE_URL_LIST = [
         # The base URL to start with
         'https://www.clien.net/service/board/jirum',
@@ -41,12 +41,11 @@ def create_url_list(last_page_index):
     return urls
 
 
-def generate_urls_based_on_config(nid):
+def create_publisher_urls_to_visit(nid):
     MAX_PAGE_INDEX = 10
     last_page_index = MAX_PAGE_INDEX
-    config = link_publisher_config.read_link_publisher_config(nid)
-    if config:
-        the_day_of_last_run = datetime.date.fromisoformat(config)
+    the_day_of_last_run = last_run_recorder.read_last_run(nid)
+    if the_day_of_last_run != -1:
         today = datetime.date.today()
         days = (today - the_day_of_last_run).days
         print(f'[INFO] The day difference was (%d).' % (days))
@@ -54,21 +53,10 @@ def generate_urls_based_on_config(nid):
     else:
         last_page_index = 1
 
-    urls = create_url_list(last_page_index)
-
-    print(urls)
+    urls = create_publisher_urls_to_visit_based_on_last_page_index(last_page_index)
 
     return urls
 
 
-def record_sucessful_visit(nid):
-    link_publisher_config.write_link_publisher_config(nid)
-
-
-def test_all():
-    nid = 'foobar'
-    generate_urls_based_on_config(nid)
-
-
-if __name__ == '__main__':
-    test_all()
+def record_successful_visit(nid):
+    last_run_recorder.write_last_run(nid)

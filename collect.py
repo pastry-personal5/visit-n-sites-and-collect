@@ -23,7 +23,8 @@ except ImportError:
     from yaml import Loader
 from bs4 import BeautifulSoup
 
-import link_publisher
+import last_run_recorder
+import publisher
 
 
 # `LinkRecorder` records visited links or URLs.
@@ -67,7 +68,7 @@ class LinkRecorder:
                 file.write(url + '\n')
 
 
-class LinkVisitorContext:
+class LinkVisitorClientContext:
     driver = None  # It's a Selenium driver.
 
     def __init__(self):
@@ -109,20 +110,21 @@ def prepare_visit(link_recorder):
     link_recorder.read_visited_urls_from_file()
 
 
-def finish_visit(link_recorder):
+def finish_visit(link_recorder, nid):
     link_recorder.write_visited_urls_to_file()
+    publisher.record_successful_visit(nid)
 
 
-def create_link_visitor_context_with_selenium(nid, npw):
+def create_link_visitor_client_context_with_selenium(nid, npw):
     driver = webdriver.Chrome()
     driver.implicitly_wait(0.5)
 
-    context = LinkVisitorContext()
-    context.driver = driver
+    client_context = LinkVisitorClientContext()
+    client_context.driver = driver
 
     visit_login_page(driver, nid, npw)
 
-    return context
+    return client_context
 
 
 def visit_login_page(driver, nid, npw):
@@ -154,36 +156,36 @@ def visit_login_page(driver, nid, npw):
         pass
 
 
-def create_link_visitor_context(nid, npw):
-    context = create_link_visitor_context_with_selenium(nid, npw)
-    return context
+def create_link_visitor_client_context(nid, npw):
+    client_context = create_link_visitor_client_context_with_selenium(nid, npw)
+    return client_context
 
 
 # It creates a Naver session and visit campaign links.
 # 적립 확인 링크 - https://new-m.pay.naver.com/pointshistory/list?category=all
 def create_naver_session_and_visit(nid, npw):
     print("[INFO] Creating a naver session and visit pages with ID:", nid, flush=True)
-    context = create_link_visitor_context(nid, npw)
-    if not context:
+    client_context = create_link_visitor_client_context(nid, npw)
+    if not client_context:
         print("[ERROR] Could not sign in with an ID: ", nid)
         return
     link_recorder = LinkRecorder(nid)
+    publisher_urls_to_visit = publisher.create_publisher_urls_to_visit(nid)
     prepare_visit(link_recorder)
-    base_urls = link_publisher.generate_urls_based_on_config(nid)
-    visit(base_urls, context, link_recorder)
-    link_publisher.record_sucessful_visit(nid)
-    finish_visit(link_recorder)
-    context.clean_up()
+    visit(publisher_urls_to_visit, client_context, link_recorder)
+    finish_visit(link_recorder, nid)
+    client_context.clean_up()
 
 
 def visit(base_urls, link_visitor_context, link_recorder):
+    TIME_TO_SLEEP = 5
     for base_url in base_urls:
         print("[INFO] Visiting:", base_url, flush=True)
-        campaign_links = find_naver_campaign_links(link_recorder, base_url)
-        if not campaign_links:
+        campaign_urls = find_naver_campaign_urls(link_recorder, base_url)
+        if not campaign_urls:
             print("[INFO] All campaign links were visited.")
             continue
-        for link in campaign_links:
+        for link in campaign_urls:
             try:
                 print("[INFO] Visiting a campaign link: ", link, flush=True)
                 link_visitor_context.driver.get(link)
@@ -195,10 +197,10 @@ def visit(base_urls, link_visitor_context, link_recorder):
             except SC.exceptions.UnexpectedAlertPresentException:
                 pass
 
-            time.sleep(5)
+            time.sleep(TIME_TO_SLEEP)
 
 
-def find_naver_campaign_links(link_recorder, base_url):
+def find_naver_campaign_urls(link_recorder, base_url):
     # Send a request to the base URL
     response = requests.get(base_url)
     soup = BeautifulSoup(response.text, 'html.parser')
@@ -212,7 +214,7 @@ def find_naver_campaign_links(link_recorder, base_url):
             naver_links.append(a_tag['href'])
 
     # Initialize a list to store campaign links
-    campaign_links = []
+    campaign_urls = []
 
     # Check each Naver link
     for link in naver_links:
@@ -226,12 +228,12 @@ def find_naver_campaign_links(link_recorder, base_url):
         # Find all links that start with the campaign URL
         for a_tag in inner_soup.find_all('a', href=True):
             if a_tag['href'].startswith("https://campaign2-api.naver.com"):
-                campaign_links.append(a_tag['href'])
+                campaign_urls.append(a_tag['href'])
 
         # Add the visited link to the set
         link_recorder.add_link(full_link)
 
-    return campaign_links
+    return campaign_urls
 
 
 if __name__ == "__main__":
