@@ -1,6 +1,6 @@
 import datetime
 
-import last_run_recorder
+import meta_info_manager
 
 
 def calculate_last_page_index(days):
@@ -13,7 +13,7 @@ def calculate_last_page_index(days):
     return last_page_index
 
 
-def create_publisher_urls_to_visit_based_on_last_page_index(last_page_index):
+def create_publisher_links_to_visit_based_on_last_page_index(last_page_index):
     TARGET_BASE_URL_LIST = [
         # The base URL to start with
         'https://www.clien.net/service/board/jirum',
@@ -27,24 +27,24 @@ def create_publisher_urls_to_visit_based_on_last_page_index(last_page_index):
 
     assert len(TARGET_BASE_URL_LIST) == len(TEMPLATE_LIST)
 
-    urls = []
+    publisher_links = []
 
     index = 0
     for base_url in TARGET_BASE_URL_LIST:
         for i in range(0, last_page_index + 1):
             if i == 0:
-                urls.append(base_url)
+                publisher_links.append(base_url)
             else:
                 template = TEMPLATE_LIST[index]
-                urls.append(template % (i))
+                publisher_links.append(template % (i))
         index += 1
-    return urls
+    return publisher_links
 
 
-def create_publisher_urls_to_visit(nid):
+def create_publisher_links_to_visit(current_meta_info_manager: meta_info_manager.MetaInfoManager):
     MAX_PAGE_INDEX = 10
     last_page_index = MAX_PAGE_INDEX
-    date_of_last_run = last_run_recorder.read_date_of_last_run(nid)
+    date_of_last_run = current_meta_info_manager.read_date_of_last_run()
     if date_of_last_run != -1:
         today = datetime.date.today()
         days = (today - date_of_last_run).days
@@ -53,10 +53,6 @@ def create_publisher_urls_to_visit(nid):
     else:
         last_page_index = 1
 
-    urls = create_publisher_urls_to_visit_based_on_last_page_index(last_page_index)
+    publisher_links = create_publisher_links_to_visit_based_on_last_page_index(last_page_index)
 
-    return urls
-
-
-def record_successful_visit(nid):
-    last_run_recorder.write_date_of_last_run(nid)
+    return publisher_links

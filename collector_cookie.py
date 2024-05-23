@@ -13,6 +13,7 @@ class CollectorCookie:
 
 # |nid| means Naver ID.
 def create_cookie_filepath(nid: str) -> str:
+    assert nid is not None
     filepath = f'%s.cookie.yaml' % (nid)
     return filepath
 
@@ -38,7 +39,7 @@ def read_cookie_from_file(filepath: str) -> CollectorCookie:
 
 
 def write_cookie(cookie: CollectorCookie) -> None:
-    assert cookie.nid != None
+    assert cookie.nid is not None
     filepath = create_cookie_filepath(cookie.nid)
     write_cookie_to_file(filepath, cookie)
 
@@ -51,7 +52,7 @@ def write_cookie_to_file(filepath: str, cookie: CollectorCookie) -> None:
         date_of_last_run: bar
         ---
     """
-    assert cookie.nid != None
+    assert cookie.nid is not None
     nid = cookie.nid
     content = {}
     content['nid'] = cookie.nid

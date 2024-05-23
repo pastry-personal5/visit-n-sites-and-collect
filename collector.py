@@ -23,48 +23,8 @@ except ImportError:
     from yaml import Loader
 from bs4 import BeautifulSoup
 
+import meta_info_manager
 import publisher
-
-
-# `LinkRecorder` records visited links or URLs.
-# Visited links belong to nid or Naver user ID.
-class LinkRecorder:
-    visited_links = set()
-    nid = None
-
-    # nid means Naver user ID.
-    def __init__(self, nid: str):
-        self.nid = nid
-
-    def is_visited(self, url: str):
-        return url in self.visited_links
-
-    def add_link(self, url: str):
-        self.visited_links.add(url)
-
-    def get_visited_urls(self):
-        return self.visited_links
-
-    def get_full_visited_urls_file_path(self):
-        full_visited_urls_file_path = f'visited_urls.{self.nid}.txt'
-        return full_visited_urls_file_path
-
-    def read_visited_urls_from_file(self):
-        file_path = self.get_full_visited_urls_file_path()
-        # Read visited URLs from file
-        try:
-            with open(file_path, 'r', encoding='utf-8') as file:
-                self.visited_links = set(file.read().splitlines())
-        except FileNotFoundError:
-            self.visited_links = set()
-        return self.visited_links
-
-    def write_visited_urls_to_file(self):
-        # Save the updated visited URLs to the file
-        file_path = self.get_full_visited_urls_file_path()
-        with open(file_path, 'w', encoding='utf-8') as file:
-            for url in self.visited_links:
-                file.write(url + '\n')
 
 
 class LinkVisitorClientContext:
@@ -105,13 +65,13 @@ def visit_with_user_config(user_config):
         create_naver_session_and_visit(user["id"], user["pw"])
 
 
-def prepare_visit(link_recorder):
-    link_recorder.read_visited_urls_from_file()
+def prepare_visit(current_meta_info_manager: meta_info_manager.MetaInfoManager):
+    current_meta_info_manager.read_visited_campaign_links_from_file()
 
 
-def finish_visit(link_recorder, nid):
-    link_recorder.write_visited_urls_to_file()
-    publisher.record_successful_visit(nid)
+def finish_visit(current_meta_info_manager: meta_info_manager.MetaInfoManager):
+    current_meta_info_manager.write_visited_campaign_links_to_file()
+    current_meta_info_manager.write_date_of_last_run()
 
 
 def create_link_visitor_client_context_with_selenium(nid, npw):
@@ -175,23 +135,23 @@ def create_naver_session_and_visit(nid, npw):
     if not client_context:
         print("[ERROR] Could not sign in with an ID: ", nid)
         return
-    link_recorder = LinkRecorder(nid)
-    publisher_urls_to_visit = publisher.create_publisher_urls_to_visit(nid)
-    prepare_visit(link_recorder)
-    visit(publisher_urls_to_visit, client_context, link_recorder)
-    finish_visit(link_recorder, nid)
+    current_meta_info_manager = meta_info_manager.MetaInfoManager(nid)
+    publisher_links_to_visit = publisher.create_publisher_links_to_visit(current_meta_info_manager)  # With help from |current_meta_info_manager|
+    prepare_visit(current_meta_info_manager)
+    visit(publisher_links_to_visit, client_context, current_meta_info_manager)
+    finish_visit(current_meta_info_manager)
     client_context.clean_up()
 
 
-def visit(base_urls, link_visitor_context, link_recorder):
+def visit(publisher_links_to_visit, link_visitor_context, current_meta_info_manager):
     TIME_TO_SLEEP = 5
-    for base_url in base_urls:
-        print("[INFO] Visiting:", base_url, flush=True)
-        campaign_urls = find_naver_campaign_urls(link_recorder, base_url)
-        if not campaign_urls:
+    for publisher_link in publisher_links_to_visit:
+        print("[INFO] Visiting:", publisher_link, flush=True)
+        campaign_links = find_naver_campaign_links(current_meta_info_manager, publisher_link)
+        if not campaign_links:
             print("[INFO] All campaign links were visited.")
             continue
-        for link in campaign_urls:
+        for link in campaign_links:
             try:
                 print("[INFO] Visiting a campaign link: ", link, flush=True)
                 link_visitor_context.driver.get(link)
@@ -206,9 +166,9 @@ def visit(base_urls, link_visitor_context, link_recorder):
             time.sleep(TIME_TO_SLEEP)
 
 
-def find_naver_campaign_urls(link_recorder, base_url):
-    # Send a request to the base URL
-    response = requests.get(base_url)
+def find_naver_campaign_links(current_meta_info_manager: meta_info_manager.MetaInfoManager, publisher_link):
+    # Send a request to the |publisher_link|
+    response = requests.get(publisher_link)
     soup = BeautifulSoup(response.text, 'html.parser')
 
     # Find all span elements with class 'list_subject' and get 'a' tags
@@ -220,12 +180,12 @@ def find_naver_campaign_urls(link_recorder, base_url):
             naver_links.append(a_tag['href'])
 
     # Initialize a list to store campaign links
-    campaign_urls = []
+    campaign_links = []
 
     # Check each Naver link
     for link in naver_links:
-        full_link = urljoin(base_url, link)
-        if link_recorder.is_visited(full_link):
+        full_link = urljoin(publisher_link, link)
+        if current_meta_info_manager.is_visited_campaign_link(full_link):
             continue  # Skip already visited links
 
         res = requests.get(full_link)
@@ -234,12 +194,12 @@ def find_naver_campaign_urls(link_recorder, base_url):
         # Find all links that start with the campaign URL
         for a_tag in inner_soup.find_all('a', href=True):
             if a_tag['href'].startswith("https://campaign2-api.naver.com"):
-                campaign_urls.append(a_tag['href'])
+                campaign_links.append(a_tag['href'])
 
         # Add the visited link to the set
-        link_recorder.add_link(full_link)
+        current_meta_info_manager.record_visited_campaign_link(full_link)
 
-    return campaign_urls
+    return campaign_links
 
 
 if __name__ == "__main__":
