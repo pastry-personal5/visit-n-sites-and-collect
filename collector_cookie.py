@@ -60,7 +60,7 @@ def write_cookie_to_file(filepath: str, cookie: CollectorCookie) -> None:
     content['date_of_last_run'] = f'%04d-%002d-%02d' % (date_of_last_run.year, date_of_last_run.month, date_of_last_run.day)
     try:
         f = open(filepath, 'wb')
-        f.write(yaml.safe_dump(content).encode('utf-8'))
+        f.write(yaml.safe_dump(content, default_style='"').encode('utf-8'))
         f.close()
     except IOError as e:
         print('[ERROR] An IOError has been occurred.')
