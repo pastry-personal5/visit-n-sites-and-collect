@@ -57,7 +57,7 @@ def write_cookie_to_file(filepath: str, cookie: CollectorCookie) -> None:
     content = {}
     content['nid'] = cookie.nid
     date_of_last_run = cookie.date_of_last_run
-    content['date_of_last_run'] = f'%04d-%02d-%2d' % (date_of_last_run.year, date_of_last_run.month, date_of_last_run.day)
+    content['date_of_last_run'] = f'%04d-%002d-%02d' % (date_of_last_run.year, date_of_last_run.month, date_of_last_run.day)
     try:
         f = open(filepath, 'wb')
         f.write(yaml.safe_dump(content).encode('utf-8'))
