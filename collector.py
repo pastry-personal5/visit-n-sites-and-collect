@@ -12,6 +12,7 @@ import time
 from urllib.parse import urljoin
 
 import requests
+import selenium
 from selenium import common as SC
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -86,11 +87,20 @@ def create_link_visitor_client_context_with_selenium(nid, npw):
     return client_context
 
 
-def get_continue_command_from_user():
+def wait_for_page_load(driver):
     while True:
-        ch = input('Please input \'c\' to continue...')
-        if ch == 'c':
-            return
+        title = driver.title
+        if title == '네이버페이':
+            break
+
+        try:
+            element_for_registering_device = driver.find_element(by=By.ID, value="new.save")
+            if element_for_registering_device:
+                break
+        except selenium.common.exceptions.NoSuchElementException:
+            pass
+
+        time.sleep(1)
 
 
 def visit_login_page(driver, nid, npw):
@@ -107,17 +117,13 @@ def visit_login_page(driver, nid, npw):
 
     element_for_submission.click()
 
-    get_continue_command_from_user()
-    title = driver.title
-    print(f'title (%s)' % title)
+    wait_for_page_load(driver)
 
     try:
         element_for_registering_device = driver.find_element(by=By.ID, value="new.save")
         if element_for_registering_device:
             element_for_registering_device.click()
-            get_continue_command_from_user()
-            title = driver.title
-            print(f'title (%s)' % title)
+            wait_for_page_load(driver)
     except SC.exceptions.NoSuchElementException:
         pass
 
