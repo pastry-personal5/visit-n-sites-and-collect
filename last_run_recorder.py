@@ -9,9 +9,8 @@ def read_date_of_last_run(nid):
     if cookie:
         date_of_last_run = cookie.date_of_last_run
         return date_of_last_run
-    else:
-        print('[INFO] Could not read cookie.')
-        return -1
+    print('[INFO] Could not read cookie.')
+    return -1
 
 
 def write_date_of_last_run(nid):

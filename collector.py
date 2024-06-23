@@ -106,7 +106,7 @@ def wait_for_page_load(driver):
 def visit_login_page(driver, nid, npw):
     driver.get("https://new-m.pay.naver.com/pcpay?page=1")
     title = driver.title
-    print(f'title (%s)' % title)
+    print(f'title ({title})')
 
     element_for_id = driver.find_element(by=By.ID, value="id")
     element_for_password = driver.find_element(by=By.ID, value="pw")
@@ -129,8 +129,7 @@ def visit_login_page(driver, nid, npw):
 
 
 def create_link_visitor_client_context(nid, npw):
-    client_context = create_link_visitor_client_context_with_selenium(nid, npw)
-    return client_context
+    return create_link_visitor_client_context_with_selenium(nid, npw)
 
 
 # It creates a Naver session and visit campaign links.

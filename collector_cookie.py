@@ -14,7 +14,7 @@ class CollectorCookie:
 # |nid| means Naver ID.
 def create_cookie_filepath(nid: str) -> str:
     assert nid is not None
-    filepath = f'%s.cookie.yaml' % (nid)
+    filepath = f'{nid}.cookie.yaml'
     return filepath
 
 
@@ -33,7 +33,7 @@ def read_cookie_from_file(filepath: str) -> CollectorCookie:
         cookie = CollectorCookie(nid, date_of_last_run)
         f.close()
         return cookie
-    except IOError as e:
+    except IOError:
         # There can be no cookie. i.e. After installation.
         return None
 
@@ -55,9 +55,9 @@ def write_cookie_to_file(filepath: str, cookie: CollectorCookie) -> None:
     assert cookie.nid is not None
     nid = cookie.nid
     content = {}
-    content['nid'] = cookie.nid
+    content['nid'] = nid
     date_of_last_run = cookie.date_of_last_run
-    content['date_of_last_run'] = f'%04d-%002d-%02d' % (date_of_last_run.year, date_of_last_run.month, date_of_last_run.day)
+    content['date_of_last_run'] = '%04d-%002d-%02d' % (date_of_last_run.year, date_of_last_run.month, date_of_last_run.day)
     try:
         f = open(filepath, 'wb')
         f.write(yaml.safe_dump(content, default_style='"').encode('utf-8'))
