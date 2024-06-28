@@ -17,6 +17,7 @@ from selenium import common as SC
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 import yaml
 try:
     from yaml import CLoader as Loader
@@ -89,8 +90,13 @@ def create_link_visitor_client_context_with_selenium(nid, npw):
 
 def wait_for_page_load(driver):
     while True:
-        title = driver.title
-        if title == '네이버페이':
+        try:
+            title = driver.title
+            if title == '네이버페이':
+                break
+        except selenium.common.exceptions.NoSuchWindowException:
+            print(f'[INFO] A user has closed the Chrome window.')
+            sys.exit(-1)
             break
 
         try:
@@ -105,8 +111,10 @@ def wait_for_page_load(driver):
 
 def visit_login_page(driver, nid, npw):
     driver.get("https://new-m.pay.naver.com/pcpay?page=1")
-    title = driver.title
-    print(f'title ({title})')
+    const_time_to_wait = 16
+    WebDriverWait(driver, const_time_to_wait).until(
+        EC.presence_of_element_located((By.ID, 'id'))
+    )
 
     element_for_id = driver.find_element(by=By.ID, value="id")
     element_for_password = driver.find_element(by=By.ID, value="pw")
