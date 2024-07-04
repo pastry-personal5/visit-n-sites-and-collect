@@ -11,6 +11,7 @@ import sys
 import time
 from urllib.parse import urljoin
 
+from loguru import logger
 import requests
 import selenium
 from selenium import common as SC
@@ -95,9 +96,8 @@ def wait_for_page_load(driver):
             if title == '네이버페이':
                 break
         except selenium.common.exceptions.NoSuchWindowException:
-            print(f'[INFO] A user has closed the Chrome window.')
+            logger.info('A user has closed the Chrome window.')
             sys.exit(-1)
-            break
 
         try:
             element_for_registering_device = driver.find_element(by=By.ID, value="new.save")
@@ -119,6 +119,7 @@ def visit_login_page(driver, nid, npw):
     element_for_id = driver.find_element(by=By.ID, value="id")
     element_for_password = driver.find_element(by=By.ID, value="pw")
     element_for_submission = driver.find_element(by=By.ID, value="submit_btn")  # Previously, the HTML element ID was log.login
+
 
     element_for_id.send_keys(nid)
     element_for_password.send_keys(npw)
