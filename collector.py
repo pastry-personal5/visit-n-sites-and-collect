@@ -118,7 +118,7 @@ def visit_login_page(driver, nid, npw):
 
     element_for_id = driver.find_element(by=By.ID, value="id")
     element_for_password = driver.find_element(by=By.ID, value="pw")
-    element_for_submission = driver.find_element(by=By.ID, value="log.login")
+    element_for_submission = driver.find_element(by=By.ID, value="submit_btn")  # Previously, the HTML element ID was log.login
 
     element_for_id.send_keys(nid)
     element_for_password.send_keys(npw)
