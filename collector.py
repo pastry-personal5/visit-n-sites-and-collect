@@ -100,8 +100,8 @@ def wait_for_page_load(driver):
             sys.exit(-1)
 
         try:
-            element_for_registering_device = driver.find_element(by=By.ID, value="new.save")
-            if element_for_registering_device:
+            element_not_to_register_device = driver.find_element(by=By.ID, value="new.dontsave")
+            if element_not_to_register_device:
                 break
         except selenium.common.exceptions.NoSuchElementException:
             pass
@@ -129,9 +129,9 @@ def visit_login_page(driver, nid, npw):
     wait_for_page_load(driver)
 
     try:
-        element_for_registering_device = driver.find_element(by=By.ID, value="new.save")
-        if element_for_registering_device:
-            element_for_registering_device.click()
+        element_not_to_register_device = driver.find_element(by=By.ID, value="new.dontsave")
+        if element_not_to_register_device:
+            element_not_to_register_device.click()
             wait_for_page_load(driver)
     except SC.exceptions.NoSuchElementException:
         pass
