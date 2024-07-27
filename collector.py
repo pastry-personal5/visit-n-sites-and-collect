@@ -31,10 +31,9 @@ import publisher
 
 
 class LinkVisitorClientContext:
-    driver = None  # It's a Selenium driver.
 
     def __init__(self):
-        self.driver = None
+        self.driver = None # It's a Selenium driver.
 
     def clean_up(self):
         if self.driver:
@@ -141,23 +140,31 @@ def create_link_visitor_client_context(nid, npw):
     return create_link_visitor_client_context_with_selenium(nid, npw)
 
 
-# It creates a Naver session and visit campaign links.
-# 적립 확인 링크 - https://new-m.pay.naver.com/pointshistory/list?category=all
-def create_naver_session_and_visit(nid, npw):
-    print("[INFO] Creating a naver session and visit pages with ID:", nid, flush=True)
+def lazy_init_client_context_if_needed(client_context, nid, npw):
+    if client_context:
+        return client_context
     client_context = create_link_visitor_client_context(nid, npw)
     if not client_context:
         print("[ERROR] Could not sign in with an ID: ", nid)
-        return
+        return None
+    return client_context
+
+
+# It creates a Naver session and visit campaign links.
+# 적립 확인 링크 - https://new-m.pay.naver.com/pointshistory/list?category=all
+def create_naver_session_and_visit(nid, npw):
+    print("[INFO] Creating a Naver session and visit pages with ID:", nid, flush=True)
+    client_context = None
     current_meta_info_manager = meta_info_manager.MetaInfoManager(nid)
     publisher_links_to_visit = publisher.create_publisher_links_to_visit(current_meta_info_manager)  # With help from |current_meta_info_manager|
     prepare_visit(current_meta_info_manager)
-    visit(publisher_links_to_visit, client_context, current_meta_info_manager)
+    visit(publisher_links_to_visit, client_context, current_meta_info_manager, nid, npw)
     finish_visit(current_meta_info_manager)
-    client_context.clean_up()
+    if client_context:
+        client_context.clean_up()
 
 
-def visit(publisher_links_to_visit, link_visitor_context, current_meta_info_manager):
+def visit(publisher_links_to_visit, client_context, current_meta_info_manager, nid, npw):
     TIME_TO_SLEEP = 5
     for publisher_link in publisher_links_to_visit:
         print("[INFO] Visiting:", publisher_link, flush=True)
@@ -168,10 +175,13 @@ def visit(publisher_links_to_visit, link_visitor_context, current_meta_info_mana
         for link in campaign_links:
             try:
                 print("[INFO] Visiting a campaign link: ", link, flush=True)
-                link_visitor_context.driver.get(link)
+                client_context = lazy_init_client_context_if_needed(client_context, nid, npw)
+                if not client_context:
+                    return
+                client_context.driver.get(link)
                 if EC.alert_is_present():
                     try:
-                        link_visitor_context.driver.switch_to.alert.accept()
+                        client_context.driver.switch_to.alert.accept()
                     except SC.exceptions.NoAlertPresentException:
                         pass
             except SC.exceptions.UnexpectedAlertPresentException:
