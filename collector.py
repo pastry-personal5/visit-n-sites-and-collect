@@ -43,7 +43,7 @@ class LinkVisitorClientContext:
 def main():
     user_config = read_user_config()
     if not user_config:
-        print("The config file is not valid.")
+        logger.error("The config file is not valid.")
         sys.exit(-1)
 
     visit_with_user_config(user_config)
@@ -55,7 +55,7 @@ def read_user_config():
         f = open(config_file_name, "r", encoding="utf-8")
         user_config = yaml.load(f.read(), Loader=Loader)
     except IOError:
-        print("[ERROR] Could not read file:", config_file_name)
+        logger.error('Could not read file: {config_file_name}')
         return {}
     return user_config
 
@@ -145,7 +145,7 @@ def lazy_init_client_context_if_needed(client_context, nid, npw):
         return client_context
     client_context = create_link_visitor_client_context(nid, npw)
     if not client_context:
-        print("[ERROR] Could not sign in with an ID: ", nid)
+        logger.error(f'Could not sign in with an ID: {nid}')
         return None
     return client_context
 
@@ -153,7 +153,7 @@ def lazy_init_client_context_if_needed(client_context, nid, npw):
 # It creates a Naver session and visit campaign links.
 # 적립 확인 링크 - https://new-m.pay.naver.com/pointshistory/list?category=all
 def create_naver_session_and_visit(nid, npw):
-    print("[INFO] Creating a Naver session and visit pages with ID:", nid, flush=True)
+    logger.info(f'Creating a Naver session and visit pages with ID: {nid}')
     client_context = None
     current_meta_info_manager = meta_info_manager.MetaInfoManager(nid)
     publisher_links_to_visit = publisher.create_publisher_links_to_visit(current_meta_info_manager)  # With help from |current_meta_info_manager|
@@ -167,14 +167,14 @@ def create_naver_session_and_visit(nid, npw):
 def visit(publisher_links_to_visit, client_context, current_meta_info_manager, nid, npw):
     TIME_TO_SLEEP = 5
     for publisher_link in publisher_links_to_visit:
-        print("[INFO] Visiting:", publisher_link, flush=True)
+        logger.info(f'Visiting: {publisher_link}')
         campaign_links = find_naver_campaign_links(current_meta_info_manager, publisher_link)
         if not campaign_links:
-            print("[INFO] All campaign links were visited.")
+            logger.info('All campaign links were visited.')
             continue
         for link in campaign_links:
             try:
-                print("[INFO] Visiting a campaign link: ", link, flush=True)
+                logger.info('Visiting a campaign link: {link}')
                 client_context = lazy_init_client_context_if_needed(client_context, nid, npw)
                 if not client_context:
                     return

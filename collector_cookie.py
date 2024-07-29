@@ -1,6 +1,8 @@
 import datetime
 import yaml
 
+from loguru import logger
+
 
 class CollectorCookie:
     nid = None
@@ -63,5 +65,5 @@ def write_cookie_to_file(filepath: str, cookie: CollectorCookie) -> None:
         f.write(yaml.safe_dump(content, default_style='"').encode('utf-8'))
         f.close()
     except IOError as e:
-        print('[ERROR] An IOError has been occurred.')
-        print(e)
+        logger.error('An IOError has been occurred.')
+        logger.error(f'Error was {e}')
