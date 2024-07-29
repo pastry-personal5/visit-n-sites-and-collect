@@ -104,8 +104,8 @@ def wait_for_page_load(driver):
                 break
         except selenium.common.exceptions.NoSuchElementException:
             pass
-
-        time.sleep(1)
+        const_time_to_sleep_in_sec = 1
+        time.sleep(const_time_to_sleep_in_sec)
 
 
 def visit_login_page(driver, nid, npw):
@@ -118,7 +118,6 @@ def visit_login_page(driver, nid, npw):
     element_for_id = driver.find_element(by=By.ID, value="id")
     element_for_password = driver.find_element(by=By.ID, value="pw")
     element_for_submission = driver.find_element(by=By.ID, value="submit_btn")  # Previously, the HTML element ID was log.login
-
 
     element_for_id.send_keys(nid)
     element_for_password.send_keys(npw)
@@ -165,7 +164,7 @@ def create_naver_session_and_visit(nid, npw):
 
 
 def visit(publisher_links_to_visit, client_context, current_meta_info_manager, nid, npw):
-    TIME_TO_SLEEP = 5
+
     for publisher_link in publisher_links_to_visit:
         logger.info(f'Visiting: {publisher_link}')
         campaign_links = find_naver_campaign_links(current_meta_info_manager, publisher_link)
@@ -187,7 +186,8 @@ def visit(publisher_links_to_visit, client_context, current_meta_info_manager, n
             except SC.exceptions.UnexpectedAlertPresentException:
                 pass
 
-            time.sleep(TIME_TO_SLEEP)
+            const_time_to_sleep_in_sec = 5
+            time.sleep(const_time_to_sleep_in_sec)
 
 
 def find_naver_campaign_links(current_meta_info_manager: meta_info_manager.MetaInfoManager, publisher_link):
