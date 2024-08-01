@@ -173,7 +173,7 @@ def visit(publisher_links_to_visit, client_context, current_meta_info_manager, n
             continue
         for link in campaign_links:
             try:
-                logger.info('Visiting a campaign link: {link}')
+                logger.info(f'Visiting a campaign link: {link}')
                 client_context = lazy_init_client_context_if_needed(client_context, nid, npw)
                 if not client_context:
                     return
