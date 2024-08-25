@@ -1,8 +1,4 @@
-import datetime
-
 from loguru import logger
-
-import meta_info_manager
 
 
 def calculate_last_page_index(days):
@@ -43,15 +39,12 @@ def create_publisher_links_to_visit_based_on_last_page_index(last_page_index):
     return publisher_links
 
 
-def create_publisher_links_to_visit(current_meta_info_manager: meta_info_manager.MetaInfoManager):
+def create_publisher_links_to_visit(days_difference_since_last_run: int):
     const_max_page_index = 10
     last_page_index = const_max_page_index
-    date_of_last_run = current_meta_info_manager.read_date_of_last_run()
-    if date_of_last_run != -1:
-        today = datetime.date.today()
-        days = (today - date_of_last_run).days
-        logger.info(f'The day difference was ({days}).')
-        last_page_index = calculate_last_page_index(days)
+    if days_difference_since_last_run != -1:
+        logger.info(f'The day difference was ({days_difference_since_last_run}).')
+        last_page_index = calculate_last_page_index(days_difference_since_last_run)
     else:
         last_page_index = 1
 

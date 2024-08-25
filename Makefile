@@ -11,7 +11,7 @@ lint:
 	pylint --rcfile=./.pylintrc *.py || true
 
 shellcheck:
-	shellcheck *.sh || true
+	shellcheck 1 || true
 
 style:
 	pycodestyle *.py || true
