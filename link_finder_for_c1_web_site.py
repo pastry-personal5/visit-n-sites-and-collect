@@ -11,17 +11,35 @@ import publisher
 
 class LinkFinderForC1WebSite(LinkFinderBase):
 
+    def get_publisher_meta(self):
+        target_base_url_list = [
+            # The base URL to start with
+            'https://www.clien.net/service/board/jirum',
+            'https://www.clien.net/service/board/park'
+        ]
+
+        template_list = [
+            'https://www.clien.net/service/board/jirum?&od=T31&category=0&po=%d',
+            'https://www.clien.net/service/board/park?&od=T31&category=0&po=%d',
+        ]
+        return (target_base_url_list, template_list)
+
     def find_set_of_campaign_links(self, days_difference_since_last_run: int) -> set[str]:
         set_of_campaign_links = set()
-        publisher_links_to_visit = publisher.create_publisher_links_to_visit(days_difference_since_last_run)  # With help from |current_meta_info_manager|
+        (target_base_url_list, template_list) = self.get_publisher_meta()
+        publisher_links_to_visit = publisher.create_publisher_links_to_visit(target_base_url_list, template_list, days_difference_since_last_run)  # With help from |current_meta_info_manager|
         for publisher_link in publisher_links_to_visit:
             campaign_links = self.find_campaign_links(publisher_link)
             set_of_campaign_links.update(campaign_links)
-        logger.info(f'In this method, got ({len(set_of_campaign_links)}) of campaign links.')
+        logger.info(f'Finally, got ({len(set_of_campaign_links)}) of campaign links.')
         return set_of_campaign_links
 
     def find_campaign_links(self, publisher_link: str):
+        # Initialize a list to store campaign links
+        campaign_links = []
+
         logger.info(f'Visiting ({publisher_link})...')
+
         # Send a request to the |publisher_link|
         try:
             response = requests.get(publisher_link)
@@ -29,16 +47,13 @@ class LinkFinderForC1WebSite(LinkFinderBase):
             return []
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        # Find all span elements with class 'list_subject' and get 'a' tags
-        list_subject_links = soup.find_all('span', class_='list_subject')
+        # Find all <span> elements with class 'list_subject' and get 'a' tags
+        list_of_article_elements = soup.find_all('span', class_='list_subject')
         partial_article_links = []
-        for span in list_subject_links:
+        for span in list_of_article_elements:
             a_tag = span.find('a', href=True)
             if a_tag and '네이버' in a_tag.text:
                 partial_article_links.append(a_tag['href'])
-
-        # Initialize a list to store campaign links
-        campaign_links = []
 
         # Check each Naver link
         for partial_article_link in partial_article_links:

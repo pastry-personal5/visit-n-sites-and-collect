@@ -11,35 +11,24 @@ def calculate_last_page_index(days):
     return last_page_index
 
 
-def create_publisher_links_to_visit_based_on_last_page_index(last_page_index):
-    const_target_base_url_list = [
-        # The base URL to start with
-        'https://www.clien.net/service/board/jirum',
-        'https://www.clien.net/service/board/park'
-    ]
-
-    const_template_list = [
-        'https://www.clien.net/service/board/jirum?&od=T31&category=0&po=%d',
-        'https://www.clien.net/service/board/park?&od=T31&category=0&po=%d',
-    ]
-
-    assert len(const_target_base_url_list) == len(const_template_list)
+def create_publisher_links_to_visit_based_on_last_page_index(target_base_url_list, template_list, last_page_index):
+    assert len(target_base_url_list) == len(template_list)
 
     publisher_links = []
 
     index = 0
-    for base_url in const_target_base_url_list:
+    for base_url in target_base_url_list:
         for i in range(0, last_page_index + 1):
             if i == 0:
                 publisher_links.append(base_url)
             else:
-                template = const_template_list[index]
+                template = template_list[index]
                 publisher_links.append(template % (i))
         index += 1
     return publisher_links
 
 
-def create_publisher_links_to_visit(days_difference_since_last_run: int):
+def create_publisher_links_to_visit(target_base_url_list, template_list, days_difference_since_last_run: int):
     const_max_page_index = 10
     last_page_index = const_max_page_index
     if days_difference_since_last_run != -1:
@@ -48,6 +37,6 @@ def create_publisher_links_to_visit(days_difference_since_last_run: int):
     else:
         last_page_index = 1
 
-    publisher_links = create_publisher_links_to_visit_based_on_last_page_index(last_page_index)
+    publisher_links = create_publisher_links_to_visit_based_on_last_page_index(target_base_url_list, template_list,  last_page_index)
 
     return publisher_links

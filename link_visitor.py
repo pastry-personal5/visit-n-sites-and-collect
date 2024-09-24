@@ -24,6 +24,7 @@ def finish_visit(current_meta_info_manager: meta_info_manager.MetaInfoManager):
 def record_visit(current_meta_info_manager: meta_info_manager.MetaInfoManager, campaign_link):
     current_meta_info_manager.record_visited_campaign_link(campaign_link)
 
+
 def create_link_visitor_client_context_with_selenium(nid, npw):
     driver = webdriver.Chrome()
     driver.implicitly_wait(0.5)
@@ -100,7 +101,7 @@ def lazy_init_client_context_if_needed(client_context, nid, npw):
 class LinkVisitorClientContext:
 
     def __init__(self):
-        self.driver = None # It's a Selenium driver.
+        self.driver = None  # It's a Selenium driver.
 
     def clean_up(self):
         if self.driver:
