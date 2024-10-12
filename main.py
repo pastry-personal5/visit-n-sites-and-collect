@@ -46,6 +46,14 @@ class MainController:
     def __init__(self):
         self.article_link_to_campaign_link_cache = ArticleLinkToCampaignLinkCache()
         self.link_visitor = LinkVisitor()
+        self.link_finders = []
+
+        # Now one has just two link finder objects. Therefore, `self.link_finders`` is going to get two elements.
+        link_finder_creator = LinkFinderCreator()
+        c1_link_finder = link_finder_creator.build_link_finder(LinkFinderCreator.const_c1, self.article_link_to_campaign_link_cache)
+        d1_link_finder = link_finder_creator.build_link_finder(LinkFinderCreator.const_d1, self.article_link_to_campaign_link_cache)
+        self.link_finders.append(c1_link_finder)
+        self.link_finders.append(d1_link_finder)
 
     def find_and_visit_all(self, user_config: dict):
         # This method is a main entry point.
@@ -53,23 +61,17 @@ class MainController:
         for user in users:
             nid = user['id']
             npw = user['pw']
+            # Let's find.
             set_of_campaign_links = self.find_all(nid)
+            # Let's visit.
             self.visit_all(nid, npw, set_of_campaign_links)
 
     def find_all(self, nid) -> set[str]:
         days_difference_since_last_run = self.get_days_difference_since_last_run(nid)
-        link_finders = []
-
-        # Now one has just two link finder objects. Therefore, |link_finders| is going to get two elements.
-        link_finder_creator = LinkFinderCreator()
-        c1_link_finder = link_finder_creator.build_link_finder(LinkFinderCreator.const_c1, self.article_link_to_campaign_link_cache)
-        d1_link_finder = link_finder_creator.build_link_finder(LinkFinderCreator.const_d1, self.article_link_to_campaign_link_cache)
-        link_finders.append(c1_link_finder)
-        link_finders.append(d1_link_finder)
 
         # Union all using |update| method of |set|
         set_of_campaign_links = set()
-        for link_finder in link_finders:
+        for link_finder in self.link_finders:
             # Look for |LinkFinderForC1WebSite.find_set_of_campaign_links| as an example...
             result = link_finder.find_set_of_campaign_links(days_difference_since_last_run)
             if result:
@@ -79,7 +81,16 @@ class MainController:
     def visit_all(self, nid, npw, set_of_campaign_links: set[str]) -> None:
         self.link_visitor.visit_all(nid, npw, set_of_campaign_links)
 
-    def get_days_difference_since_last_run(self, nid) -> int:
+    def get_days_difference_since_last_run(self, nid: str) -> int:
+        """It returns the number of days since the last run.
+
+        Args:
+            nid (str): n-site ID as a string.
+
+        Returns:
+            int: The number of days as an integer.
+                One returns -1 if the date of the last run is unavailable.
+        """
         current_meta_info_manager = meta_info_manager.MetaInfoManager(nid)
         date_of_last_run = current_meta_info_manager.read_date_of_last_run()
         if date_of_last_run != -1:
@@ -100,12 +111,26 @@ def main():
 
 
 def read_user_config():
-    config_file_name = "main_config.yaml"
+    """Read a user configuration.
+
+    Returns:
+        dict: a user configuration dictionary.
+            Currently, its format is YAML and it looks like this below.
+            Please note that two spaces are recommended.
+
+            users:
+                - id:
+                    foo
+                pw:
+                    bar
+                ...
+    """
+    config_file_name = 'main_config.yaml'
     try:
-        f = open(config_file_name, "r", encoding="utf-8")
+        f = open(config_file_name, 'r', encoding='utf-8')
         user_config = yaml.load(f.read(), Loader=Loader)
     except IOError:
-        logger.error('Could not read file: {config_file_name}')
+        logger.error(f'Could not read file: {config_file_name}')
         return {}
     return user_config
 
