@@ -97,8 +97,9 @@ class LinkFinderForD1WebSite(LinkFinderBase):
 
         # Find all links that start with the campaign URL
         for a_tag in inner_soup.find_all('a', href=True):
-            if a_tag['href'].startswith('https://campaign2-api.naver.com/'):
-                list_of_campaign_links.append(a_tag['href'])
+            campaign_link = a_tag['href']
+            if campaign_link.startswith('https://campaign2-api.naver.com/') or campaign_link.startswith('https://ofw.adison.co/'):
+                list_of_campaign_links.append(campaign_link)
         logger.info(f'Got ({len(list_of_campaign_links)}) of campaign links.')
 
         # Note: The length of |list_of_campaign_links| can be zero. It's intentional.
@@ -134,6 +135,9 @@ class LinkFinderForD1WebSite(LinkFinderBase):
         for article_element in list_of_article_elements:
             a_tag = article_element.find('a', href=True)
             if a_tag and '네이버' in a_tag.text:
-                list_of_article_links.append(a_tag['href'])
+                article_link = a_tag['href']
+                if article_link.startswith('/promotion'):
+                    article_link = 'https://damoang.net' + article_link
+                list_of_article_links.append(article_link)
 
         return list_of_article_links
