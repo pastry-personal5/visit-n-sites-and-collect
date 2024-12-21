@@ -8,6 +8,7 @@ Please look for `LICENSE` file for license.
 Please beware of file encoding.
 """
 import datetime
+import pprint
 import sys
 
 from loguru import logger
@@ -21,6 +22,7 @@ from article_link_to_campaign_link_cache import ArticleLinkToCampaignLinkCache
 from link_finder_for_c1_web_site import LinkFinderForC1WebSite
 from link_finder_for_d1_web_site import LinkFinderForD1WebSite
 from link_visitor import LinkVisitor
+from meta_info_manager import SharedContext
 import meta_info_manager
 
 
@@ -44,6 +46,8 @@ class LinkFinderCreator:
 class MainController:
 
     def __init__(self):
+        self.shared_context = SharedContext()
+
         self.article_link_to_campaign_link_cache = ArticleLinkToCampaignLinkCache()
         self.link_visitor = LinkVisitor()
         self.link_finders = []
@@ -55,7 +59,20 @@ class MainController:
         self.link_finders.append(c1_link_finder)
         self.link_finders.append(d1_link_finder)
 
-    def find_and_visit_all(self, user_config: dict):
+    def _init_with_user_config(self, user_config: dict):
+        logger.info(pprint.pformat(user_config))
+        flag_init = False
+        # Initialize `self.shared_context`
+        if 'cloud_file_storage' in user_config:
+            user_config_for_cloud_file_storage = user_config['cloud_file_storage']
+            if 'folder_id_for_parent' in user_config_for_cloud_file_storage:
+                self.shared_context.init_with_key_config(user_config_for_cloud_file_storage['folder_id_for_parent'])
+                flag_init = True
+        if not flag_init:
+            logger.warning('Invalid configuration has been found. Look for main configuration file.')
+
+    def find_and_visit_all_with_user_config(self, user_config: dict):
+        self._init_with_user_config(user_config)
         # This method is a main entry point.
         users = user_config["users"]
         for user in users:
@@ -79,7 +96,7 @@ class MainController:
         return set_of_campaign_links
 
     def visit_all(self, nid, npw, set_of_campaign_links: set[str]) -> None:
-        self.link_visitor.visit_all(nid, npw, set_of_campaign_links)
+        self.link_visitor.visit_all(nid, npw, set_of_campaign_links, self.shared_context)
 
     def get_days_difference_since_last_run(self, nid: str) -> int:
         """It returns the number of days since the last run.
@@ -91,7 +108,7 @@ class MainController:
             int: The number of days as an integer.
                 One returns -1 if the date of the last run is unavailable.
         """
-        current_meta_info_manager = meta_info_manager.MetaInfoManager(nid)
+        current_meta_info_manager = meta_info_manager.MetaInfoManager(nid, self.shared_context)
         date_of_last_run = current_meta_info_manager.read_date_of_last_run()
         if date_of_last_run != -1:
             today = datetime.date.today()
@@ -107,7 +124,7 @@ def main():
         logger.error("The config file is not valid.")
         sys.exit(-1)
 
-    main_controller.find_and_visit_all(user_config)
+    main_controller.find_and_visit_all_with_user_config(user_config)
 
 
 def read_user_config():

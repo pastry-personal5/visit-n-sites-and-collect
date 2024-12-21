@@ -9,6 +9,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
+from meta_info_manager import SharedContext
 import meta_info_manager
 
 
@@ -113,12 +114,12 @@ class LinkVisitor:
     def __init__(self):
         pass
 
-    def visit_all(self, nid, npw, set_of_campaign_links: set[str]) -> None:
+    def visit_all(self, nid, npw, set_of_campaign_links: set[str], shared_context: SharedContext) -> None:
         # It creates a Naver session and visit campaign links.
         # 적립 확인 링크 - https://new-m.pay.naver.com/pointshistory/list?category=all
         logger.info(f'Creating a Naver session and visit pages with ID: ({nid}), if needed.')
         client_context = None
-        current_meta_info_manager = meta_info_manager.MetaInfoManager(nid)
+        current_meta_info_manager = meta_info_manager.MetaInfoManager(nid, shared_context)
         prepare_visit(current_meta_info_manager)
         self.visit(set_of_campaign_links, client_context, current_meta_info_manager, nid, npw)
         finish_visit(current_meta_info_manager)
