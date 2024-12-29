@@ -4,8 +4,7 @@ import pickle
 from googleapiclient.discovery import build
 from googleapiclient.errors import UnknownApiNameOrVersion
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
-from google.oauth2.credentials import Credentials
-from google.auth.exceptions import MutualTLSChannelError
+from google.auth.exceptions import MutualTLSChannelError, RefreshError
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from loguru import logger
@@ -31,23 +30,32 @@ class CloudFileStorage:
         '''
         Authenticate and return a Google Drive service instance.
         '''
-        TOKEN_FILE='google_cloud_token.pickle'
-        CREDENTIALS_FILE = 'google_cloud_credentials.json'
+        const_token_file_path = 'google_cloud_token.pickle'
+        const_creds_file_path = 'google_cloud_credentials.json'
 
         creds = None
         # Token.pickle stores the user's credentials
-        if os.path.exists(TOKEN_FILE):
-            with open(TOKEN_FILE, 'rb') as token:
+        if os.path.exists(const_token_file_path):
+            with open(const_token_file_path, 'rb') as token:
                 creds = pickle.load(token)
         # If there are no valid credentials, prompt the user to log in
         if not creds or not creds.valid:
+            flag_has_to_get_creds = True
             if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
+                try:
+                    creds.refresh(Request())
+                    flag_has_to_get_creds = False
+                except RefreshError as e:
+                    logger.warning('A token refresh error has been occurred. Please authenticate with a Google ID.')
+                    logger.warning(e)
+                    flag_has_to_get_creds = True
             else:
-                flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_FILE, self.SCOPES)
+                flag_has_to_get_creds = True
+            if flag_has_to_get_creds:
+                flow = InstalledAppFlow.from_client_secrets_file(const_creds_file_path, self.SCOPES)
                 creds = flow.run_local_server(port=0)
             # Save the credentials for the next run
-            with open(TOKEN_FILE, 'wb') as token:
+            with open(const_token_file_path, 'wb') as token:
                 pickle.dump(creds, token)
         try:
             self.drive_service = build('drive', 'v3', credentials=creds)
@@ -59,7 +67,7 @@ class CloudFileStorage:
             logger.error('Mutual TLS Channel Error.')
             logger.error(e)
 
-    def _search_file(self, file_name, folder_id=None):
+    def _search_file(self, file_name: str, folder_id=None):
         '''
         Search for a file by name in a specific folder (if provided).
         '''
@@ -99,30 +107,17 @@ class CloudFileStorage:
             ).execute()
             logger.info(f'File \'{file_name}\' updated successfully.')
             return updated_file
-        else:
-            # Upload a new file
-            new_file = self.drive_service.files().create(
-                body=file_metadata,
-                media_body=media,
-                fields='id'
-            ).execute()
-            logger.info(f'File \'{file_name}\' uploaded successfully.')
-            return new_file
 
-    def _upload_file_to_drive(self, drive_service, folder_id_for_parent_of_cloud_file_storage, file_path):
-        '''
-        Upload a local file to Google Drive.
-        '''
-        file_name = os.path.basename(file_path)
-        media = MediaFileUpload(file_path, resumable=True)
-        file_metadata = {
-            'name': file_name,
-            'parents': [folder_id_for_parent_of_cloud_file_storage]  # It must be in a list.
-        }
-        file = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
-        print(f"File '{file_name}' uploaded successfully with File ID: {file.get('id')}")
+        # Upload a new file
+        new_file = self.drive_service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields='id'
+        ).execute()
+        logger.info(f'File \'{file_name}\' uploaded successfully.')
+        return new_file
 
-    def _download_file(self, file_id, file_name):
+    def _download_file(self, file_id: str, file_name: str) -> None:
         '''
         Download a file from Google Drive.
         '''
@@ -138,7 +133,7 @@ class CloudFileStorage:
 
         logger.info(f'File downloaded to: {file_path}')
 
-    def upload(self, file_name: str, folder_id_for_parent_of_cloud_file_storage: str):
+    def upload(self, file_name: str, folder_id_for_parent_of_cloud_file_storage: str) -> None:
         if not self.flag_authenticated:
             self._authenticate_google_drive()
         if not self.flag_authenticated:
