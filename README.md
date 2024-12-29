@@ -1,31 +1,55 @@
 # visit-n-sites-and-collect
 
-This module visits Naver Pay's advertisement sites or campaign links.
+This module automates visiting N-site's campaign links.
 
-It works with Python 3.11.
+## Requirements
 
-# Quick Guide
+It is verified that it works with Python 3.11.
 
-Install python, pip.
+## Quick Start Guide
 
-Create virtual environment.
+* Install python and pip.
 
-```
-python -m venv venv
-```
+  Ensure Python 3.11 (or later) and pip are installed on your system.
 
-Activate virtual environment.
+* Create a virtual environment.
 
-Install requirements.
+  Run the following command to create a virtual environment:
+  ```bash
+  python -m venv venv
+  ```
 
-```
-pip install -r requirements.txt
-```
+* Activate the virtual environment.
 
-Edit the configuration file: `main_config.yaml`.
+  ```bash
+  source 0
+  ```
 
-Run the module.
+* Install requirements.
 
-```
-python collect.py
-```
+  Run the following command to install requirements.
+  ```bash
+  pip install -r requirements.txt
+  ```
+
+* Edit the configuration file: `global_config.yaml`.
+
+* Run the module.
+
+  Execute the script.
+  ```bash
+  python main.py
+  ```
+
+* Optionally, create a Google Cloud application for Google Drive access.
+
+  Prepare `google_cloud_credentials.json` file.
+
+  Look for the `cloud_file_storage.py` for details.
+
+## Test
+
+* Run the following command to test.
+  ```bash
+  make test
+  ```
