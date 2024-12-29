@@ -1,0 +1,12 @@
+users:
+  - id:
+      foo
+    pw:
+      bar
+  - id:
+      baz
+    pw:
+      foobar
+# 'cloud_file_storage' is optional.
+cloud_file_storage:
+  folder_id_for_parent: abcdefg
