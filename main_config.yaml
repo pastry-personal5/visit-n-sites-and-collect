@@ -1,9 +1,0 @@
-users:
-  - id:
-      foo
-    pw:
-      bar
-  - id:
-      baz
-    pw:
-      foobar

@@ -18,7 +18,7 @@ class SharedContext:
         self.flag_has_valid_cloud_file_storage_config = False
         self.folder_id_of_parent_of_cloud_file_storage = None
 
-    def init_with_key_config(self, folder_id_of_parent_of_cloud_file_storage: str) -> None:
+    def init_with_core_config(self, folder_id_of_parent_of_cloud_file_storage: str) -> None:
         self.flag_has_valid_cloud_file_storage_config = True
         self.folder_id_of_parent_of_cloud_file_storage = folder_id_of_parent_of_cloud_file_storage
 

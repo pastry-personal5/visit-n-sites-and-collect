@@ -59,22 +59,21 @@ class MainController:
         self.link_finders.append(c1_link_finder)
         self.link_finders.append(d1_link_finder)
 
-    def _init_with_user_config(self, user_config: dict):
-        logger.info(pprint.pformat(user_config))
+    def _init_with_global_config(self, global_config: dict):
         flag_init = False
         # Initialize `self.shared_context`
-        if 'cloud_file_storage' in user_config:
-            user_config_for_cloud_file_storage = user_config['cloud_file_storage']
-            if 'folder_id_for_parent' in user_config_for_cloud_file_storage:
-                self.shared_context.init_with_key_config(user_config_for_cloud_file_storage['folder_id_for_parent'])
+        if 'cloud_file_storage' in global_config:
+            global_config_for_cloud_file_storage = global_config['cloud_file_storage']
+            if 'folder_id_for_parent' in global_config_for_cloud_file_storage:
+                self.shared_context.init_with_core_config(global_config_for_cloud_file_storage['folder_id_for_parent'])
                 flag_init = True
         if not flag_init:
             logger.warning('Invalid configuration has been found. Look for main configuration file.')
 
-    def find_and_visit_all_with_user_config(self, user_config: dict):
-        self._init_with_user_config(user_config)
+    def find_and_visit_all_with_global_config(self, global_config: dict):
+        self._init_with_global_config(global_config)
         # This method is a main entry point.
-        users = user_config["users"]
+        users = global_config["users"]
         for user in users:
             nid = user['id']
             npw = user['pw']
@@ -117,18 +116,8 @@ class MainController:
         return -1
 
 
-def main():
-    main_controller = MainController()
-    user_config = read_user_config()
-    if not user_config:
-        logger.error("The config file is not valid.")
-        sys.exit(-1)
-
-    main_controller.find_and_visit_all_with_user_config(user_config)
-
-
-def read_user_config():
-    """Read a user configuration.
+def read_global_config():
+    """Read a global configuration.
 
     Returns:
         dict: a user configuration dictionary.
@@ -142,14 +131,24 @@ def read_user_config():
                     bar
                 ...
     """
-    config_file_name = 'main_config.yaml'
+    config_file_path = './global_config.yaml'
     try:
-        f = open(config_file_name, 'r', encoding='utf-8')
-        user_config = yaml.load(f.read(), Loader=Loader)
+        f = open(config_file_path, 'r', encoding='utf-8')
+        global_config = yaml.load(f.read(), Loader=Loader)
     except IOError:
-        logger.error(f'Could not read file: {config_file_name}')
+        logger.error(f'Could not read file: {config_file_path}')
         return {}
-    return user_config
+    return global_config
+
+
+def main():
+    main_controller = MainController()
+    global_config = read_global_config()
+    if not global_config:
+        logger.error("The config file is not valid.")
+        sys.exit(-1)
+
+    main_controller.find_and_visit_all_with_global_config(global_config)
 
 
 if __name__ == "__main__":
