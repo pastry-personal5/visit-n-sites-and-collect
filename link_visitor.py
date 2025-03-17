@@ -135,12 +135,27 @@ class LinkVisitor:
                 client_context = lazy_init_client_context_if_needed(client_context, nid, npw)
                 if not client_context:
                     return
-                client_context.driver.get(campaign_link)
+                driver = client_context.driver
+                driver.get(campaign_link)
+
                 if EC.alert_is_present():
                     try:
-                        client_context.driver.switch_to.alert.accept()
+                        driver.switch_to.alert.accept()
                     except SC.exceptions.NoAlertPresentException:
                         pass
+
+                if campaign_link.startswith('https://campaign2.naver.com/'):
+                    const_time_to_wait_in_sec = 16
+                    WebDriverWait(driver, const_time_to_wait_in_sec).until(
+                        EC.presence_of_element_located((By.CLASS_NAME, 'popup_link'))
+                    )
+                    element_to_go_to_the_next_step = driver.find_element(By.CLASS_NAME, 'popup_link')
+                    if element_to_go_to_the_next_step:
+                        try:
+                            element_to_go_to_the_next_step.click()
+                        except SC.ElementNotInteractableException:
+                            pass
+
                 record_visit(current_meta_info_manager, campaign_link)
             except SC.exceptions.UnexpectedAlertPresentException:
                 pass

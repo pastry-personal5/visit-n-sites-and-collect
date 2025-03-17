@@ -77,7 +77,7 @@ class LinkFinderForC1WebSite(LinkFinderBase):
             # Find all links that start with the campaign URL
             for a_tag in inner_soup.find_all('a', href=True):
                 campaign_link = a_tag['href']
-                if campaign_link.startswith('https://campaign2-api.naver.com/') or campaign_link.startswith('https://ofw.adison.co/'):
+                if self.is_starting_with_campaign_url(campaign_link):
                     campaign_links.append(campaign_link)
 
             # Note: The length of |campaign_links| can be zero. It's intentional.
