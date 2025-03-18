@@ -129,7 +129,7 @@ class LinkVisitor:
     def visit(self, set_of_campaign_links, client_context, current_meta_info_manager: meta_info_manager.MetaInfoManager, nid, npw):
         for campaign_link in set_of_campaign_links:
             if current_meta_info_manager.is_visited_campaign_link(campaign_link):
-                continue
+                continue  # Skip already visited links
             try:
                 logger.info(f'Visiting a campaign link: {campaign_link}')
                 client_context = lazy_init_client_context_if_needed(client_context, nid, npw)
@@ -138,11 +138,12 @@ class LinkVisitor:
                 driver = client_context.driver
                 driver.get(campaign_link)
 
-                if EC.alert_is_present():
-                    try:
-                        driver.switch_to.alert.accept()
-                    except SC.exceptions.NoAlertPresentException:
-                        pass
+                # Handle unexpected alerts
+                try:
+                    const_time_to_wait_in_sec = 3
+                    WebDriverWait(driver, const_time_to_wait_in_sec).until(EC.alert_is_present()).accept()
+                except (SC.NoAlertPresentException, SC.TimeoutException):
+                    pass  # No alert present, continue
 
                 if campaign_link.startswith('https://campaign2.naver.com/'):
                     const_time_to_wait_in_sec = 16
@@ -153,12 +154,13 @@ class LinkVisitor:
                     if element_to_go_to_the_next_step:
                         try:
                             element_to_go_to_the_next_step.click()
-                        except SC.ElementNotInteractableException:
+                        except SC.exceptions.ElementNotInteractableException:
+                            pass
+                        except SC.exceptions.StaleElementReferenceException:
                             pass
 
                 record_visit(current_meta_info_manager, campaign_link)
             except SC.exceptions.UnexpectedAlertPresentException:
-                pass
+                logger.warning(f'Unexpected alert on {campaign_link}, skipping...')
 
-            const_time_to_sleep_in_sec = 5
-            time.sleep(const_time_to_sleep_in_sec)
+            WebDriverWait(driver, 5).until(lambda d: True)  # Acts as a non-blocking sleep
