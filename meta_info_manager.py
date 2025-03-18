@@ -10,9 +10,9 @@ import last_run_recorder
 
 
 class SharedContext:
-    '''
+    """
     A share context among n-site IDs.
-    '''
+    """
 
     def __init__(self):
         self.flag_has_valid_cloud_file_storage_config = False
@@ -47,21 +47,21 @@ class LinkRecorder:
         return self.visited_links
 
     def _get_full_visited_urls_file_path(self):
-        full_visited_urls_file_path = f'visited_urls.{self.nid}.txt'
+        full_visited_urls_file_path = f"visited_urls.{self.nid}.txt"
         return full_visited_urls_file_path
 
     def _get_gzipped_full_visited_urls_file_path(self):
-        gzipped_full_visited_urls_file_path = f'visited_urls.{self.nid}.txt.gz'
+        gzipped_full_visited_urls_file_path = f"visited_urls.{self.nid}.txt.gz"
         return gzipped_full_visited_urls_file_path
 
     def _compress_file(self, input_file, output_file):
-        with open(input_file, 'rb') as f_in:
-            with gzip.open(output_file, 'wb') as f_out:
+        with open(input_file, "rb") as f_in:
+            with gzip.open(output_file, "wb") as f_out:
                 shutil.copyfileobj(f_in, f_out)
 
     def _decompress_file(self, input_file, output_file):
-        with gzip.open(input_file, 'rb') as f_in:
-            with open(output_file, 'wb') as f_out:
+        with gzip.open(input_file, "rb") as f_in:
+            with open(output_file, "wb") as f_out:
                 shutil.copyfileobj(f_in, f_out)
 
     def read_visited_campaign_links_from_file(self):
@@ -70,19 +70,22 @@ class LinkRecorder:
         file_path = self._get_full_visited_urls_file_path()
         # Dwonload a file from the cloud if available.
         if self.shared_context.has_valid_cloud_file_storage_config():
-            self.cloud_file_storage.download(gzipped_file_path, self.shared_context.folder_id_of_parent_of_cloud_file_storage)
+            self.cloud_file_storage.download(
+                gzipped_file_path,
+                self.shared_context.folder_id_of_parent_of_cloud_file_storage,
+            )
         else:
-            logger.warning('While trying to read visited campaign links, one has found that the cloud file storage configuration is invalid. Look for the main configuration file.')
+            logger.warning("While trying to read visited campaign links, one has found that the cloud file storage configuration is invalid. Look for the main configuration file.")
         # Gunzip
         try:
             self._decompress_file(gzipped_file_path, file_path)
         except FileNotFoundError:
-            logger.warning(f'File not found: ({gzipped_file_path})')
+            logger.warning(f"File not found: ({gzipped_file_path})")
             # Here, let's do not return. That means trying to read a plain text file.
 
         # Read visited URLs from file
         try:
-            with open(file_path, 'r', encoding='utf-8') as file:
+            with open(file_path, "r", encoding="utf-8") as file:
                 self.visited_links = set(file.read().splitlines())
         except FileNotFoundError:
             self.visited_links = set()
@@ -91,18 +94,21 @@ class LinkRecorder:
     def write_visited_campaign_links_to_file(self):
         # Save the updated visited URLs to the file
         file_path = self._get_full_visited_urls_file_path()
-        with open(file_path, 'w', encoding='utf-8') as file:
+        with open(file_path, "w", encoding="utf-8") as file:
             for url in self.visited_links:
-                file.write(url + '\n')
+                file.write(url + "\n")
         # Gzip
         gzipped_file_path = self._get_gzipped_full_visited_urls_file_path()
         self._compress_file(file_path, gzipped_file_path)
-        logger.info(f'One has saved and gzipped: ({gzipped_file_path})')
+        logger.info(f"One has saved and gzipped: ({gzipped_file_path})")
         # Upload
         if self.shared_context.has_valid_cloud_file_storage_config():
-            self.cloud_file_storage.upload(gzipped_file_path, self.shared_context.folder_id_of_parent_of_cloud_file_storage)
+            self.cloud_file_storage.upload(
+                gzipped_file_path,
+                self.shared_context.folder_id_of_parent_of_cloud_file_storage,
+            )
         else:
-            logger.warning('While trying to write visited campaign links, one has found that the cloud file storage configuration is invalid. Look for the main configuration file.')
+            logger.warning("While trying to write visited campaign links, one has found that the cloud file storage configuration is invalid. Look for the main configuration file.")
 
 
 # `MetaInfoManager` manages "meta info" about collector.

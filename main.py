@@ -7,12 +7,14 @@ Please visit and find the original author. i.e. https://www.clien.net/service/bo
 Please look for `LICENSE` file for license.
 Please beware of file encoding.
 """
+
 import datetime
 import pprint
 import sys
 
 from loguru import logger
 import yaml
+
 try:
     from yaml import CLoader as Loader
 except ImportError:
@@ -34,7 +36,11 @@ class LinkFinderCreator:
     def __init__(self):
         pass
 
-    def build_link_finder(self, visitor_type: int, article_link_to_campaign_link_cache: ArticleLinkToCampaignLinkCache):
+    def build_link_finder(
+        self,
+        visitor_type: int,
+        article_link_to_campaign_link_cache: ArticleLinkToCampaignLinkCache,
+    ):
         if visitor_type == self.const_c1:
             return LinkFinderForC1WebSite(article_link_to_campaign_link_cache)
         if visitor_type == self.const_d1:
@@ -62,21 +68,21 @@ class MainController:
     def _init_with_global_config(self, global_config: dict):
         flag_init = False
         # Initialize `self.shared_context`
-        if 'cloud_file_storage' in global_config:
-            global_config_for_cloud_file_storage = global_config['cloud_file_storage']
-            if 'folder_id_for_parent' in global_config_for_cloud_file_storage:
-                self.shared_context.init_with_core_config(global_config_for_cloud_file_storage['folder_id_for_parent'])
+        if "cloud_file_storage" in global_config:
+            global_config_for_cloud_file_storage = global_config["cloud_file_storage"]
+            if "folder_id_for_parent" in global_config_for_cloud_file_storage:
+                self.shared_context.init_with_core_config(global_config_for_cloud_file_storage["folder_id_for_parent"])
                 flag_init = True
         if not flag_init:
-            logger.warning('Invalid configuration has been found. Look for main configuration file.')
+            logger.warning("Invalid configuration has been found. Look for main configuration file.")
 
     def find_and_visit_all_with_global_config(self, global_config: dict):
         self._init_with_global_config(global_config)
         # This method is a main entry point.
         users = global_config["users"]
         for user in users:
-            nid = user['id']
-            npw = user['pw']
+            nid = user["id"]
+            npw = user["pw"]
             # Let's find.
             set_of_campaign_links = self.find_all(nid)
             # Let's visit.
@@ -131,12 +137,12 @@ def read_global_config():
                     bar
                 ...
     """
-    config_file_path = './global_config.yaml'
+    config_file_path = "./global_config.yaml"
     try:
-        f = open(config_file_path, 'r', encoding='utf-8')
+        f = open(config_file_path, "r", encoding="utf-8")
         global_config = yaml.load(f.read(), Loader=Loader)
     except IOError:
-        logger.error(f'Could not read file: {config_file_path}')
+        logger.error(f"Could not read file: {config_file_path}")
         return {}
     return global_config
 

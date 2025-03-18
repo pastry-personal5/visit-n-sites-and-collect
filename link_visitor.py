@@ -42,10 +42,10 @@ def wait_for_page_load(driver):
     while True:
         try:
             title = driver.title
-            if title == '네이버페이':
+            if title == "네이버페이":
                 break
         except selenium.common.exceptions.NoSuchWindowException:
-            logger.info('A user has closed the Chrome window.')
+            logger.info("A user has closed the Chrome window.")
             sys.exit(-1)
 
         try:
@@ -61,9 +61,7 @@ def wait_for_page_load(driver):
 def visit_login_page(driver, nid, npw):
     driver.get("https://new-m.pay.naver.com/pcpay?page=1")
     const_time_to_wait = 16
-    WebDriverWait(driver, const_time_to_wait).until(
-        EC.presence_of_element_located((By.ID, 'id'))
-    )
+    WebDriverWait(driver, const_time_to_wait).until(EC.presence_of_element_located((By.ID, "id")))
 
     element_for_id = driver.find_element(by=By.ID, value="id")
     element_for_password = driver.find_element(by=By.ID, value="pw")
@@ -94,7 +92,7 @@ def lazy_init_client_context_if_needed(client_context, nid, npw):
         return client_context
     client_context = create_link_visitor_client_context(nid, npw)
     if not client_context:
-        logger.error(f'Could not sign in with an ID: {nid}')
+        logger.error(f"Could not sign in with an ID: {nid}")
         return None
     return client_context
 
@@ -117,7 +115,7 @@ class LinkVisitor:
     def visit_all(self, nid, npw, set_of_campaign_links: set[str], shared_context: SharedContext) -> None:
         # It creates a Naver session and visit campaign links.
         # 적립 확인 링크 - https://new-m.pay.naver.com/pointshistory/list?category=all
-        logger.info(f'Creating a Naver session and visit pages with ID: ({nid}), if needed.')
+        logger.info(f"Creating a Naver session and visit pages with ID: ({nid}), if needed.")
         client_context = None
         current_meta_info_manager = meta_info_manager.MetaInfoManager(nid, shared_context)
         prepare_visit(current_meta_info_manager)
@@ -126,12 +124,19 @@ class LinkVisitor:
         if client_context:
             client_context.clean_up()
 
-    def visit(self, set_of_campaign_links, client_context, current_meta_info_manager: meta_info_manager.MetaInfoManager, nid, npw):
+    def visit(
+        self,
+        set_of_campaign_links,
+        client_context,
+        current_meta_info_manager: meta_info_manager.MetaInfoManager,
+        nid,
+        npw,
+    ):
         for campaign_link in set_of_campaign_links:
             if current_meta_info_manager.is_visited_campaign_link(campaign_link):
                 continue  # Skip already visited links
             try:
-                logger.info(f'Visiting a campaign link: {campaign_link}')
+                logger.info(f"Visiting a campaign link: {campaign_link}")
                 client_context = lazy_init_client_context_if_needed(client_context, nid, npw)
                 if not client_context:
                     return
@@ -145,12 +150,10 @@ class LinkVisitor:
                 except (SC.NoAlertPresentException, SC.TimeoutException):
                     pass  # No alert present, continue
 
-                if campaign_link.startswith('https://campaign2.naver.com/'):
+                if campaign_link.startswith("https://campaign2.naver.com/"):
                     const_time_to_wait_in_sec = 16
-                    WebDriverWait(driver, const_time_to_wait_in_sec).until(
-                        EC.presence_of_element_located((By.CLASS_NAME, 'popup_link'))
-                    )
-                    element_to_go_to_the_next_step = driver.find_element(By.CLASS_NAME, 'popup_link')
+                    WebDriverWait(driver, const_time_to_wait_in_sec).until(EC.presence_of_element_located((By.CLASS_NAME, "popup_link")))
+                    element_to_go_to_the_next_step = driver.find_element(By.CLASS_NAME, "popup_link")
                     if element_to_go_to_the_next_step:
                         try:
                             element_to_go_to_the_next_step.click()
@@ -161,6 +164,6 @@ class LinkVisitor:
 
                 record_visit(current_meta_info_manager, campaign_link)
             except SC.exceptions.UnexpectedAlertPresentException:
-                logger.warning(f'Unexpected alert on {campaign_link}, skipping...')
+                logger.warning(f"Unexpected alert on {campaign_link}, skipping...")
 
             WebDriverWait(driver, 5).until(lambda d: True)  # Acts as a non-blocking sleep
