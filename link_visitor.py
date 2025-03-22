@@ -152,15 +152,18 @@ class LinkVisitor:
 
                 if campaign_link.startswith("https://campaign2.naver.com/"):
                     const_time_to_wait_in_sec = 16
-                    WebDriverWait(driver, const_time_to_wait_in_sec).until(EC.presence_of_element_located((By.CLASS_NAME, "popup_link")))
-                    element_to_go_to_the_next_step = driver.find_element(By.CLASS_NAME, "popup_link")
-                    if element_to_go_to_the_next_step:
-                        try:
-                            element_to_go_to_the_next_step.click()
-                        except SC.exceptions.ElementNotInteractableException:
-                            pass
-                        except SC.exceptions.StaleElementReferenceException:
-                            pass
+                    try:
+                        WebDriverWait(driver, const_time_to_wait_in_sec).until(EC.presence_of_element_located((By.CLASS_NAME, "popup_link")))
+                        element_to_go_to_the_next_step = driver.find_element(By.CLASS_NAME, "popup_link")
+                        if element_to_go_to_the_next_step:
+                            try:
+                                element_to_go_to_the_next_step.click()
+                            except SC.exceptions.ElementNotInteractableException:
+                                pass
+                            except SC.exceptions.StaleElementReferenceException:
+                                pass
+                    except SC.exceptions.TimeoutException:
+                        pass
 
                 record_visit(current_meta_info_manager, campaign_link)
             except SC.exceptions.UnexpectedAlertPresentException:
