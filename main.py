@@ -21,11 +21,11 @@ except ImportError:
     from yaml import Loader
 
 from article_link_to_campaign_link_cache import ArticleLinkToCampaignLinkCache
+from configuration_for_cloud_file_storage import ConfigurationForCloudFileStorage
+from last_run_recorder import LastRunRecorder
 from link_finder_for_c1_web_site import LinkFinderForC1WebSite
 from link_finder_for_d1_web_site import LinkFinderForD1WebSite
 from link_visitor import LinkVisitor
-from meta_info_manager import SharedContext
-import meta_info_manager
 
 
 class LinkFinderCreator:
@@ -52,10 +52,9 @@ class LinkFinderCreator:
 class MainController:
 
     def __init__(self):
-        self.shared_context = SharedContext()
-
+        self.configuration_for_cloud_file_stroage = ConfigurationForCloudFileStorage()
         self.article_link_to_campaign_link_cache = ArticleLinkToCampaignLinkCache()
-        self.link_visitor = LinkVisitor()
+        self.link_visitor = LinkVisitor(configuration_for_cloud_file_stroage=self.configuration_for_cloud_file_stroage)
         self.link_finders = []
 
         # Now one has just two link finder objects. Therefore, `self.link_finders`` is going to get two elements.
@@ -67,11 +66,11 @@ class MainController:
 
     def _init_with_global_config(self, global_config: dict):
         flag_init = False
-        # Initialize `self.shared_context`
+        # Initialize `self.configuration_for_cloud_file_stroage` with the given configuration.
         if "cloud_file_storage" in global_config:
             global_config_for_cloud_file_storage = global_config["cloud_file_storage"]
             if "folder_id_for_parent" in global_config_for_cloud_file_storage:
-                self.shared_context.init_with_core_config(global_config_for_cloud_file_storage["folder_id_for_parent"])
+                self.configuration_for_cloud_file_stroage.init_with_core_config(global_config_for_cloud_file_storage["folder_id_for_parent"])
                 flag_init = True
         if not flag_init:
             logger.warning("Invalid configuration has been found. Look for main configuration file.")
@@ -101,7 +100,7 @@ class MainController:
         return set_of_campaign_links
 
     def visit_all(self, nid, npw, set_of_campaign_links: set[str]) -> None:
-        self.link_visitor.visit_all(nid, npw, set_of_campaign_links, self.shared_context)
+        self.link_visitor.visit_all(nid, npw, set_of_campaign_links)
 
     def get_days_difference_since_last_run(self, nid: str) -> int:
         """It returns the number of days since the last run.
@@ -113,8 +112,8 @@ class MainController:
             int: The number of days as an integer.
                 One returns -1 if the date of the last run is unavailable.
         """
-        current_meta_info_manager = meta_info_manager.MetaInfoManager(nid, self.shared_context)
-        date_of_last_run = current_meta_info_manager.read_date_of_last_run()
+        last_run_recorder = LastRunRecorder()
+        date_of_last_run = last_run_recorder.read_date_of_last_run(nid)
         if date_of_last_run != -1:
             today = datetime.date.today()
             days = (today - date_of_last_run).days

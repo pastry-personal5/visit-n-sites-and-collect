@@ -1,6 +1,8 @@
+from abc import abstractmethod
 import sys
 import time
 
+import gzip
 from loguru import logger
 import selenium
 from selenium import common as SC
@@ -8,22 +10,11 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
+import shutil
 
-from meta_info_manager import SharedContext
-import meta_info_manager
-
-
-def prepare_visit(current_meta_info_manager: meta_info_manager.MetaInfoManager):
-    current_meta_info_manager.read_visited_campaign_links_from_file()
-
-
-def finish_visit(current_meta_info_manager: meta_info_manager.MetaInfoManager):
-    current_meta_info_manager.write_visited_campaign_links_to_file()
-    current_meta_info_manager.write_date_of_last_run()
-
-
-def record_visit(current_meta_info_manager: meta_info_manager.MetaInfoManager, campaign_link):
-    current_meta_info_manager.record_visited_campaign_link(campaign_link)
+from cloud_file_storage import CloudFileStorage
+from configuration_for_cloud_file_storage import ConfigurationForCloudFileStorage
+import last_run_recorder
 
 
 def create_link_visitor_client_context_with_selenium(nid, npw):
@@ -97,6 +88,129 @@ def lazy_init_client_context_if_needed(client_context, nid, npw):
     return client_context
 
 
+class VisitedCampaignLinkRecorderBase:
+
+    @abstractmethod
+    def set_unique_id(self, unique_id: str) -> None:
+        pass
+
+    @abstractmethod
+    def prepare_visit(self) -> None:
+        pass
+
+    @abstractmethod
+    def finish_visit(self) -> None:
+        pass
+
+    @abstractmethod
+    def is_visited_campaign_link(self, campaign_link: str) -> bool:
+        pass
+
+    @abstractmethod
+    def record_visit(self, campaign_link: str) -> None:
+        pass
+
+
+class VisitedCampaignLinkRecorder(VisitedCampaignLinkRecorderBase):
+    """
+    A class that records visited campaign links.
+    """
+
+    def __init__(self, configuration_for_cloud_file_stroage: ConfigurationForCloudFileStorage, cloud_file_storage: CloudFileStorage):
+        self.nid = None
+        self.visited_links = None
+        self.configuration_for_cloud_file_stroage = configuration_for_cloud_file_stroage
+        self.cloud_file_storage = cloud_file_storage
+
+    def reset_with_nid(self, nid: str) -> None:
+        logger.info(f"Resetting with a new n-site ID: ({nid})")
+        self.nid = nid
+        self.visited_links = set()
+
+    def prepare_visit(self) -> None:
+        assert self.nid is not None
+        self._read_visited_campaign_links_from_file()
+
+    def finish_visit(self):
+        assert self.nid is not None
+        self._write_visited_campaign_links_to_file()
+
+    def is_visited_campaign_link(self, campaign_link: str) -> bool:
+        return campaign_link in self.visited_links
+
+    def record_visit(self, campaign_link: str) -> None:
+        self.visited_links.add(campaign_link)
+
+    def get_visited_urls(self):
+        return self.visited_links
+
+    def _get_full_visited_urls_file_path(self):
+        assert self.nid is not None
+        full_visited_urls_file_path = f"visited_urls.{self.nid}.txt"
+        return full_visited_urls_file_path
+
+    def _get_gzipped_full_visited_urls_file_path(self):
+        assert self.nid is not None
+        gzipped_full_visited_urls_file_path = f"visited_urls.{self.nid}.txt.gz"
+        return gzipped_full_visited_urls_file_path
+
+    def _compress_file(self, input_file, output_file):
+        with open(input_file, "rb") as f_in:
+            with gzip.open(output_file, "wb") as f_out:
+                shutil.copyfileobj(f_in, f_out)
+
+    def _decompress_file(self, input_file, output_file):
+        with gzip.open(input_file, "rb") as f_in:
+            with open(output_file, "wb") as f_out:
+                shutil.copyfileobj(f_in, f_out)
+
+    def _read_visited_campaign_links_from_file(self):
+        # Prepare
+        gzipped_file_path = self._get_gzipped_full_visited_urls_file_path()
+        file_path = self._get_full_visited_urls_file_path()
+        # Dwonload a file from the cloud if available.
+        if self.configuration_for_cloud_file_stroage.has_valid_cloud_file_storage_config():
+            self.cloud_file_storage.download(
+                gzipped_file_path,
+                self.configuration_for_cloud_file_stroage.folder_id_of_parent_of_cloud_file_storage,
+            )
+        else:
+            logger.warning("While trying to read visited campaign links, one has found that the cloud file storage configuration is invalid. Look for the main configuration file.")
+        # Gunzip
+        try:
+            self._decompress_file(gzipped_file_path, file_path)
+        except FileNotFoundError:
+            logger.warning(f"File not found: ({gzipped_file_path})")
+            # Here, let's do not return. That means trying to read a plain text file.
+
+        # Read visited URLs from file
+        try:
+            with open(file_path, "r", encoding="utf-8") as file:
+                self.visited_links = set(file.read().splitlines())
+        except FileNotFoundError:
+            self.visited_links = set()
+        return self.visited_links
+
+    def _write_visited_campaign_links_to_file(self):
+        # Save the updated visited URLs to the file
+        file_path = self._get_full_visited_urls_file_path()
+        with open(file_path, "w", encoding="utf-8") as file:
+            for url in self.visited_links:
+                file.write(url + "\n")
+        # Gzip
+        gzipped_file_path = self._get_gzipped_full_visited_urls_file_path()
+        self._compress_file(file_path, gzipped_file_path)
+        logger.info(f"One has saved and gzipped: ({gzipped_file_path})")
+        # Upload
+        if self.configuration_for_cloud_file_stroage.has_valid_cloud_file_storage_config():
+            self.cloud_file_storage.upload(
+                gzipped_file_path,
+                self.configuration_for_cloud_file_stroage.folder_id_of_parent_of_cloud_file_storage,
+            )
+        else:
+            logger.warning("While trying to write visited campaign links, one has found that the cloud file storage configuration is invalid. Look for the main configuration file.")
+
+
 class LinkVisitorClientContext:
 
     def __init__(self):
@@ -109,31 +223,45 @@ class LinkVisitorClientContext:
 
 class LinkVisitor:
 
-    def __init__(self):
-        pass
+    def __init__(self, configuration_for_cloud_file_stroage: ConfigurationForCloudFileStorage):
+        self.configuration_for_cloud_file_stroage = configuration_for_cloud_file_stroage  # configuration_for_cloud_file_stroage  # The lifecycle of configuration_for_cloud_file_stroage is handled by the caller.
+        self.cloud_file_storage = CloudFileStorage()
+        self.visited_campaign_link_recorder = VisitedCampaignLinkRecorder(self.configuration_for_cloud_file_stroage, self.cloud_file_storage)
+        self.last_run_recorder = last_run_recorder.LastRunRecorder()
 
-    def visit_all(self, nid, npw, set_of_campaign_links: set[str], shared_context: SharedContext) -> None:
+    def visit_all(self, nid, npw, set_of_campaign_links: set[str]) -> None:
         # It creates a Naver session and visit campaign links.
         # 적립 확인 링크 - https://new-m.pay.naver.com/pointshistory/list?category=all
         logger.info(f"Creating a Naver session and visit pages with ID: ({nid}), if needed.")
         client_context = None
-        current_meta_info_manager = meta_info_manager.MetaInfoManager(nid, shared_context)
-        prepare_visit(current_meta_info_manager)
-        self.visit(set_of_campaign_links, client_context, current_meta_info_manager, nid, npw)
-        finish_visit(current_meta_info_manager)
+
+        # Reset this.
+        self.visited_campaign_link_recorder.reset_with_nid(nid)
+
+        self._prepare_visit(nid)
+        self._visit(set_of_campaign_links, client_context, nid, npw)
+        self._finish_visit(nid)
+
         if client_context:
             client_context.clean_up()
 
-    def visit(
+    def _prepare_visit(self, nid: str) -> None:
+        self.visited_campaign_link_recorder.prepare_visit()
+        self.last_run_recorder.prepare_visit(nid)
+
+    def _finish_visit(self, nid: str) -> None:
+        self.visited_campaign_link_recorder.finish_visit()
+        self.last_run_recorder.finish_visit(nid)
+
+    def _visit(
         self,
         set_of_campaign_links,
         client_context,
-        current_meta_info_manager: meta_info_manager.MetaInfoManager,
         nid,
         npw,
     ):
         for campaign_link in set_of_campaign_links:
-            if current_meta_info_manager.is_visited_campaign_link(campaign_link):
+            if self.visited_campaign_link_recorder.is_visited_campaign_link(campaign_link):
                 continue  # Skip already visited links
             try:
                 logger.info(f"Visiting a campaign link: {campaign_link}")
@@ -165,7 +293,7 @@ class LinkVisitor:
                     except SC.exceptions.TimeoutException:
                         pass
 
-                record_visit(current_meta_info_manager, campaign_link)
+                self.visited_campaign_link_recorder.record_visit(campaign_link)
             except SC.exceptions.UnexpectedAlertPresentException:
                 logger.warning(f"Unexpected alert on {campaign_link}, skipping...")
 
