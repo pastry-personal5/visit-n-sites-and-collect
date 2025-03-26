@@ -72,9 +72,9 @@ class MainController:
         for user in users:
             nid = user["id"]
             npw = user["pw"]
-            # Let's find.
+            # (1) Let's find.
             set_of_campaign_links = self.find_all(nid)
-            # Let's visit.
+            # (2) Let's visit.
             self.visit_all(nid, npw, set_of_campaign_links)
 
     def find_all(self, nid) -> set[str]:
