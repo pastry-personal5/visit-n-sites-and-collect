@@ -21,7 +21,6 @@ except ImportError:
     from yaml import Loader
 
 from article_link_to_campaign_link_cache import ArticleLinkToCampaignLinkCache
-from configuration_for_cloud_file_storage import ConfigurationForCloudFileStorage
 from last_run_recorder import LastRunRecorder
 from link_finder_for_c1_web_site import LinkFinderForC1WebSite
 from link_finder_for_d1_web_site import LinkFinderForD1WebSite
@@ -52,9 +51,8 @@ class LinkFinderCreator:
 class MainController:
 
     def __init__(self):
-        self.configuration_for_cloud_file_stroage = ConfigurationForCloudFileStorage()
         self.article_link_to_campaign_link_cache = ArticleLinkToCampaignLinkCache()
-        self.link_visitor = LinkVisitor(configuration_for_cloud_file_stroage=self.configuration_for_cloud_file_stroage)
+        self.link_visitor = LinkVisitor()
         self.link_finders = []
 
         # Now one has just two link finder objects. Therefore, `self.link_finders`` is going to get two elements.
@@ -65,15 +63,7 @@ class MainController:
         self.link_finders.append(d1_link_finder)
 
     def _init_with_global_config(self, global_config: dict):
-        flag_init = False
-        # Initialize `self.configuration_for_cloud_file_stroage` with the given configuration.
-        if "cloud_file_storage" in global_config:
-            global_config_for_cloud_file_storage = global_config["cloud_file_storage"]
-            if "folder_id_for_parent" in global_config_for_cloud_file_storage:
-                self.configuration_for_cloud_file_stroage.init_with_core_config(global_config_for_cloud_file_storage["folder_id_for_parent"])
-                flag_init = True
-        if not flag_init:
-            logger.warning("Invalid configuration has been found. Look for main configuration file.")
+        self.link_visitor.init_with_global_config(global_config)
 
     def find_and_visit_all_with_global_config(self, global_config: dict):
         self._init_with_global_config(global_config)

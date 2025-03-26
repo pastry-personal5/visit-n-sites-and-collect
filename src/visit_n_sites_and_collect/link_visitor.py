@@ -116,9 +116,13 @@ class VisitedCampaignLinkRecorder(VisitedCampaignLinkRecorderBase):
     A class that records visited campaign links.
     """
 
-    def __init__(self, configuration_for_cloud_file_stroage: ConfigurationForCloudFileStorage, cloud_file_storage: CloudFileStorage):
+    def __init__(self):
         self.nid = None
         self.visited_links = None
+        self.configuration_for_cloud_file_stroage = None  # This can be None. This is a configuration for cloud file storage.
+        self.cloud_file_storage = None
+
+    def init_with_cloud_file_storage(self, configuration_for_cloud_file_stroage: ConfigurationForCloudFileStorage, cloud_file_storage: CloudFileStorage) -> None:
         self.configuration_for_cloud_file_stroage = configuration_for_cloud_file_stroage
         self.cloud_file_storage = cloud_file_storage
 
@@ -169,7 +173,7 @@ class VisitedCampaignLinkRecorder(VisitedCampaignLinkRecorderBase):
         gzipped_file_path = self._get_gzipped_full_visited_urls_file_path()
         file_path = self._get_full_visited_urls_file_path()
         # Dwonload a file from the cloud if available.
-        if self.configuration_for_cloud_file_stroage.has_valid_cloud_file_storage_config():
+        if self.configuration_for_cloud_file_stroage and self.configuration_for_cloud_file_stroage.has_valid_cloud_file_storage_config():
             self.cloud_file_storage.download(
                 gzipped_file_path,
                 self.configuration_for_cloud_file_stroage.folder_id_of_parent_of_cloud_file_storage,
@@ -223,11 +227,22 @@ class LinkVisitorClientContext:
 
 class LinkVisitor:
 
-    def __init__(self, configuration_for_cloud_file_stroage: ConfigurationForCloudFileStorage):
-        self.configuration_for_cloud_file_stroage = configuration_for_cloud_file_stroage  # configuration_for_cloud_file_stroage  # The lifecycle of configuration_for_cloud_file_stroage is handled by the caller.
+    def __init__(self):
+        self.configuration_for_cloud_file_stroage = None   # The lifecycle of this object is handled by this object.
         self.cloud_file_storage = CloudFileStorage()
-        self.visited_campaign_link_recorder = VisitedCampaignLinkRecorder(self.configuration_for_cloud_file_stroage, self.cloud_file_storage)
+        self.visited_campaign_link_recorder = VisitedCampaignLinkRecorder()
         self.last_run_recorder = last_run_recorder.LastRunRecorder()
+
+    def init_with_global_config(self, global_config: dict) -> None:
+        # Configuration about Cloud File Storage is very local to this class. It's for modularity.
+        # Therefore, if one can, let's initialize it from `global_config.`
+        # i.e. Initialize `self.configuration_for_cloud_file_stroage` with the given configuration, if available.
+        if "cloud_file_storage" in global_config:
+            global_config_for_cloud_file_storage = global_config["cloud_file_storage"]
+            if "folder_id_for_parent" in global_config_for_cloud_file_storage:
+                self.configuration_for_cloud_file_stroage = ConfigurationForCloudFileStorage()
+                self.configuration_for_cloud_file_stroage.init_with_core_config(global_config_for_cloud_file_storage["folder_id_for_parent"])
+        self.visited_campaign_link_recorder.init_with_cloud_file_storage(self.configuration_for_cloud_file_stroage, self.cloud_file_storage)
 
     def visit_all(self, nid, npw, set_of_campaign_links: set[str]) -> None:
         # It creates a Naver session and visit campaign links.
