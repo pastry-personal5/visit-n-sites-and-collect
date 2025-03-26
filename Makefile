@@ -1,4 +1,5 @@
 PYCODESTYLE_MAX_LINE_LENGTH=512
+SOURCE_CODE_PATH=./src/visit_n_sites_and_collect
 .PHONY: all checkmake clean lint shellcheck style test unittest
 
 all: checkmake shellcheck style lint test
@@ -9,7 +10,7 @@ checkmake:
 clean:
 
 lint:
-	pylint --rcfile=./.pylintrc *.py || true
+	pylint --rcfile=./.pylintrc ${SOURCE_CODE_PATH}/*.py || true
 
 shellcheck:
 	shellcheck 1 || true
