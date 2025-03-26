@@ -27,7 +27,7 @@ from link_finder_for_d1_web_site import LinkFinderForD1WebSite
 from link_visitor import LinkVisitor
 
 
-class LinkFinderCreator:
+class LinkFinderFactory:
 
     const_c1 = 0
     const_d1 = 1
@@ -56,9 +56,9 @@ class MainController:
         self.link_finders = []
 
         # Now one has just two link finder objects. Therefore, `self.link_finders`` is going to get two elements.
-        link_finder_creator = LinkFinderCreator()
-        c1_link_finder = link_finder_creator.build_link_finder(LinkFinderCreator.const_c1, self.article_link_to_campaign_link_cache)
-        d1_link_finder = link_finder_creator.build_link_finder(LinkFinderCreator.const_d1, self.article_link_to_campaign_link_cache)
+        link_finder_creator = LinkFinderFactory()
+        c1_link_finder = link_finder_creator.build_link_finder(LinkFinderFactory.const_c1, self.article_link_to_campaign_link_cache)
+        d1_link_finder = link_finder_creator.build_link_finder(LinkFinderFactory.const_d1, self.article_link_to_campaign_link_cache)
         self.link_finders.append(c1_link_finder)
         self.link_finders.append(d1_link_finder)
 
