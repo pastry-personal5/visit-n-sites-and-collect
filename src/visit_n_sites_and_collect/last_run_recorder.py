@@ -2,29 +2,30 @@ import datetime
 
 from loguru import logger
 
-import collector_cookie
+from collector_cookie import CollectorCookie
+from collector_cookie import CollectorCookieController
 
 
 class LastRunRecorder:
 
     def __init__(self):
-        pass
+        self.collector_cookie_controller = CollectorCookieController()
 
-    def read_date_of_last_run(self, nid):
+    def read_date_of_last_run(self, nid) -> datetime.date:
         logger.info("Trying to read the date of last run...")
-        cookie = collector_cookie.read_cookie(nid)
+        cookie = self.collector_cookie_controller.read_cookie(nid)
         if cookie:
             date_of_last_run = cookie.date_of_last_run
             return date_of_last_run
         logger.info("Could not read cookie.")
-        return -1
+        return None
 
     def prepare_visit(self, nid: str) -> None:
         pass
 
     def finish_visit(self, nid: str) -> None:
-        self.write_date_of_last_run(nid)
+        self._write_date_of_last_run(nid)
 
-    def write_date_of_last_run(self, nid):
-        cookie = collector_cookie.CollectorCookie(nid, datetime.date.today())
-        collector_cookie.write_cookie(cookie)
+    def _write_date_of_last_run(self, nid):
+        cookie = CollectorCookie(nid, datetime.date.today())
+        self.collector_cookie_controller.write_cookie(cookie)

@@ -104,7 +104,7 @@ class MainController:
         """
         last_run_recorder = LastRunRecorder()
         date_of_last_run = last_run_recorder.read_date_of_last_run(nid)
-        if date_of_last_run != -1:
+        if date_of_last_run is not None:
             today = datetime.date.today()
             days = (today - date_of_last_run).days
             return days
