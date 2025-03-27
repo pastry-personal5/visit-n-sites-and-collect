@@ -22,8 +22,8 @@ except ImportError:
 
 from article_link_to_campaign_link_cache import ArticleLinkToCampaignLinkCache
 from last_run_recorder import LastRunRecorder
-from link_finder_for_c1_web_site import LinkFinderForC1WebSite
-from link_finder_for_d1_web_site import LinkFinderForD1WebSite
+from link_finder_for_c1_web_site_impl import LinkFinderForC1WebSiteImpl
+from link_finder_for_d1_web_site_impl import LinkFinderForD1WebSiteImpl
 from link_visitor import LinkVisitor
 
 
@@ -41,9 +41,9 @@ class LinkFinderFactory:
         article_link_to_campaign_link_cache: ArticleLinkToCampaignLinkCache,
     ):
         if visitor_type == self.const_c1:
-            return LinkFinderForC1WebSite(article_link_to_campaign_link_cache)
+            return LinkFinderForC1WebSiteImpl(article_link_to_campaign_link_cache)
         if visitor_type == self.const_d1:
-            return LinkFinderForD1WebSite(article_link_to_campaign_link_cache)
+            return LinkFinderForD1WebSiteImpl(article_link_to_campaign_link_cache)
         else:
             return None
 

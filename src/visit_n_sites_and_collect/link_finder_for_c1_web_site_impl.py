@@ -4,12 +4,11 @@ from bs4 import BeautifulSoup
 from loguru import logger
 import requests
 
-from article_link_to_campaign_link_cache import ArticleLinkToCampaignLinkCache
-from link_finder_base import LinkFinderBase
+from link_finder_impl_base import LinkFinderImplBase
 import publisher
 
 
-class LinkFinderForC1WebSite(LinkFinderBase):
+class LinkFinderForC1WebSiteImpl(LinkFinderImplBase):
 
     def get_publisher_meta(self):
         target_base_url_list = [
