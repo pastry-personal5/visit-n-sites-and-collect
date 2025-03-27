@@ -62,9 +62,6 @@ class MainController:
         self.link_finders.append(c1_link_finder)
         self.link_finders.append(d1_link_finder)
 
-    def _init_with_global_config(self, global_config: dict):
-        self.link_visitor.init_with_global_config(global_config)
-
     def find_and_visit_all_with_global_config(self, global_config: dict):
         self._init_with_global_config(global_config)
         # This method is a main entry point.
@@ -73,12 +70,15 @@ class MainController:
             nid = user["id"]
             npw = user["pw"]
             # (1) Let's find.
-            set_of_campaign_links = self.find_all(nid)
+            set_of_campaign_links = self._find_all(nid)
             # (2) Let's visit.
-            self.visit_all(nid, npw, set_of_campaign_links)
+            self._visit_all(nid, npw, set_of_campaign_links)
 
-    def find_all(self, nid) -> set[str]:
-        days_difference_since_last_run = self.get_days_difference_since_last_run(nid)
+    def _init_with_global_config(self, global_config: dict):
+        self.link_visitor.init_with_global_config(global_config)
+
+    def _find_all(self, nid) -> set[str]:
+        days_difference_since_last_run = self._get_days_difference_since_last_run(nid)
 
         # Union all using |update| method of |set|
         set_of_campaign_links = set()
@@ -89,10 +89,10 @@ class MainController:
                 set_of_campaign_links.update(result)
         return set_of_campaign_links
 
-    def visit_all(self, nid, npw, set_of_campaign_links: set[str]) -> None:
+    def _visit_all(self, nid, npw, set_of_campaign_links: set[str]) -> None:
         self.link_visitor.visit_all(nid, npw, set_of_campaign_links)
 
-    def get_days_difference_since_last_run(self, nid: str) -> int:
+    def _get_days_difference_since_last_run(self, nid: str) -> int:
         """It returns the number of days since the last run.
 
         Args:
@@ -111,7 +111,7 @@ class MainController:
         return -1
 
 
-def read_global_config():
+def read_global_config() -> dict:
     """Read a global configuration.
 
     Returns:
@@ -136,7 +136,7 @@ def read_global_config():
     return global_config
 
 
-def main():
+def main() -> None:
     main_controller = MainController()
     global_config = read_global_config()
     if not global_config:
