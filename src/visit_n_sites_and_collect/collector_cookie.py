@@ -70,5 +70,5 @@ class CollectorCookieController:
             f.write(yaml.safe_dump(content, default_style='"').encode("utf-8"))
             f.close()
         except IOError as e:
-            logger.error("An IOError has been occurred.")
+            logger.error("An IOError occurred.")
             logger.error(f"Error was {e}")

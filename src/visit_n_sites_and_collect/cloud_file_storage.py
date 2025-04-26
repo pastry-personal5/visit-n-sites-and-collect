@@ -47,7 +47,7 @@ class CloudFileStorage:
                     creds.refresh(Request())
                     flag_has_to_get_creds = False
                 except RefreshError as e:
-                    logger.warning("A token refresh error has been occurred. Please authenticate with a Google ID.")
+                    logger.warning("A token refresh error occurred. Please authenticate with a Google ID.")
                     logger.warning(e)
                     flag_has_to_get_creds = True
             else:
