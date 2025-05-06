@@ -7,7 +7,10 @@ all: checkmake shellcheck style lint test
 checkmake:
 	checkmake ./Makefile
 
-clean:
+clean: clean_visited_urls
+
+clean_visited_urls:
+	python ./src/visit_n_sites_and_collect/clean_visited_urls.py
 
 lint:
 	pylint --rcfile=./.pylintrc ${SOURCE_CODE_PATH}/*.py || true

@@ -143,3 +143,17 @@ class CloudFileStorage:
         file_id = existing_file["id"]
         self._download_file(file_id, file_name)
         return True
+
+    def delete(self, file_name: str, folder_id_for_parent_of_cloud_file_storage: str) -> bool:
+        if not self.flag_authenticated:
+            self._authenticate_google_drive()
+        if not self.flag_authenticated:
+            return False
+        # Check if the file exists
+        existing_file = self._search_file(file_name, folder_id=folder_id_for_parent_of_cloud_file_storage)
+        if not existing_file:
+            return False
+        file_id = existing_file["id"]
+        self.drive_service.files().delete(fileId=file_id).execute()
+        logger.info(f"File '{file_name}' deleted successfully.")
+        return True

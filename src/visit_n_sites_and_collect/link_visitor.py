@@ -1,4 +1,5 @@
 from abc import abstractmethod
+import os
 import sys
 import time
 
@@ -88,7 +89,7 @@ def lazy_init_client_context_if_needed(client_context, nid, npw):
     return client_context
 
 
-class VisitedCampaignLinkRecorderBase:
+class VisitedCampaignLinkControllerBase:
 
     @abstractmethod
     def set_unique_id(self, unique_id: str) -> None:
@@ -110,8 +111,12 @@ class VisitedCampaignLinkRecorderBase:
     def record_visit(self, campaign_link: str) -> None:
         pass
 
+    @abstractmethod
+    def delete_all(self) -> None:
+        pass
 
-class VisitedCampaignLinkRecorder(VisitedCampaignLinkRecorderBase):
+
+class VisitedCampaignLinkController(VisitedCampaignLinkControllerBase):
     """
     A class that records visited campaign links.
     """
@@ -214,6 +219,24 @@ class VisitedCampaignLinkRecorder(VisitedCampaignLinkRecorderBase):
         else:
             logger.warning("While trying to write visited campaign links, one has found that the cloud file storage configuration is invalid. Look for the main configuration file.")
 
+    def delete_all(self) -> None:
+        file_path = self._get_full_visited_urls_file_path()
+        gzipped_file_path = self._get_gzipped_full_visited_urls_file_path()
+        logger.info(f"Deleting if exist: ({file_path}) and ({gzipped_file_path})...")
+        try:
+            os.remove(file_path)
+            os.remove(gzipped_file_path)
+        except FileNotFoundError:
+            pass
+
+        if self.configuration_for_cloud_file_stroage.has_valid_cloud_file_storage_config():
+            self.cloud_file_storage.delete(
+                gzipped_file_path,
+                self.configuration_for_cloud_file_stroage.folder_id_of_parent_of_cloud_file_storage,
+            )
+        else:
+            logger.warning("While trying to write visited campaign links, one has found that the cloud file storage configuration is invalid. Look for the main configuration file.")
+
 
 class LinkVisitorClientContext:
 
@@ -230,7 +253,7 @@ class LinkVisitor:
     def __init__(self):
         self.configuration_for_cloud_file_stroage = None   # The lifecycle of this object is handled by this object.
         self.cloud_file_storage = CloudFileStorage()
-        self.visited_campaign_link_recorder = VisitedCampaignLinkRecorder()
+        self.visited_campaign_link_recorder = VisitedCampaignLinkController()
         self.last_run_recorder = last_run_recorder.LastRunRecorder()
 
     def init_with_global_config(self, global_config: dict) -> None:
