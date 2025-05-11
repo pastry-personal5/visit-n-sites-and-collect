@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""
+This script is used to clean the visited URLs file.
+It uses the CloudFileStorage and VisitedCampaignLinkController classes to manage the visited URLs.
+It can be run from the command line and takes no arguments.
+It reads the global configuration from a file and uses it to initialize the CloudFileStorage and VisitedCampaignLinkController classes.
+"""
 
 from loguru import logger
 
