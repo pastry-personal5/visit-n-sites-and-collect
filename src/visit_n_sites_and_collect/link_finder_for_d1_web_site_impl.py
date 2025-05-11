@@ -96,6 +96,11 @@ class LinkFinderForD1WebSiteImpl(LinkFinderImplBase):
             campaign_link = a_tag["href"]
             if self.is_starting_with_campaign_url(campaign_link):
                 list_of_campaign_links.append(campaign_link)
+            else:
+                # Log only significant links.
+                # We don't want to log all links, because there are too many of them.
+                if campaign_link.find("http") != -1 and campaign_link.find("damoang") == -1:
+                    logger.info(f"Not a campaign link: {campaign_link}")
         logger.info(f"Got ({len(list_of_campaign_links)}) of campaign links.")
 
         # Note: The length of |list_of_campaign_links| can be zero. It's intentional.

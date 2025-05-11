@@ -78,6 +78,11 @@ class LinkFinderForC1WebSiteImpl(LinkFinderImplBase):
                 campaign_link = a_tag["href"]
                 if self.is_starting_with_campaign_url(campaign_link):
                     campaign_links.append(campaign_link)
+                else:
+                    # Log only significant links.
+                    # We don't want to log all links, because there are too many of them.
+                    if campaign_link.find("http") != -1 and campaign_link.find("clien") == -1:
+                        logger.info(f"Not a campaign link: {campaign_link}")
 
             # Note: The length of |campaign_links| can be zero. It's intentional.
             self.article_link_to_campaign_link_cache.put(article_link, campaign_links)
