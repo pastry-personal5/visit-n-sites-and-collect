@@ -13,12 +13,12 @@ import sys
 
 from loguru import logger
 
-from article_link_to_campaign_link_cache import ArticleLinkToCampaignLinkCache
-from last_run_recorder import LastRunRecorder
-from link_finder_for_c1_web_site_impl import LinkFinderForC1WebSiteImpl
-from link_finder_for_d1_web_site_impl import LinkFinderForD1WebSiteImpl
-from link_visitor import LinkVisitor
-from global_config import read_global_config
+from src.visit_n_sites_and_collect.article_link_to_campaign_link_cache import ArticleLinkToCampaignLinkCache
+from src.visit_n_sites_and_collect.last_run_recorder import LastRunRecorder
+from src.visit_n_sites_and_collect.link_finder_for_c1_web_site_impl import LinkFinderForC1WebSiteImpl
+from src.visit_n_sites_and_collect.link_finder_for_d1_web_site_impl import LinkFinderForD1WebSiteImpl
+from src.visit_n_sites_and_collect.link_visitor import LinkVisitor
+from src.visit_n_sites_and_collect.global_config import read_global_config
 
 
 class LinkFinderFactory:

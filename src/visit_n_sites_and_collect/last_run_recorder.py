@@ -2,8 +2,8 @@ import datetime
 
 from loguru import logger
 
-from collector_cookie import CollectorCookie
-from collector_cookie import CollectorCookieController
+from src.visit_n_sites_and_collect.collector_cookie import CollectorCookie
+from src.visit_n_sites_and_collect.collector_cookie import CollectorCookieController
 
 
 class LastRunRecorder:

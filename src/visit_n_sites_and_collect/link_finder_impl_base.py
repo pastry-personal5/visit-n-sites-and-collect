@@ -1,4 +1,4 @@
-from article_link_to_campaign_link_cache import ArticleLinkToCampaignLinkCache
+from src.visit_n_sites_and_collect.article_link_to_campaign_link_cache import ArticleLinkToCampaignLinkCache
 
 
 class LinkFinderImplBase:

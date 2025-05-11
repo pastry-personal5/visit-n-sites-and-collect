@@ -4,9 +4,8 @@ from bs4 import BeautifulSoup
 from loguru import logger
 import requests
 
-from link_finder_impl_base import LinkFinderImplBase
-import publisher
-
+from src.visit_n_sites_and_collect.link_finder_impl_base import LinkFinderImplBase
+from src.visit_n_sites_and_collect.publisher import PublisherController
 
 class LinkFinderForC1WebSiteImpl(LinkFinderImplBase):
 
@@ -26,7 +25,7 @@ class LinkFinderForC1WebSiteImpl(LinkFinderImplBase):
     def find_set_of_campaign_links(self, days_difference_since_last_run: int) -> set[str]:
         set_of_campaign_links = set()
         (target_base_url_list, template_list) = self.get_publisher_meta()
-        publisher_controller = publisher.PublisherController()
+        publisher_controller = PublisherController()
         publisher_links_to_visit = publisher_controller.create_publisher_links_to_visit(target_base_url_list, template_list, days_difference_since_last_run)
         for publisher_link in publisher_links_to_visit:
             campaign_links = self.find_campaign_links(publisher_link)

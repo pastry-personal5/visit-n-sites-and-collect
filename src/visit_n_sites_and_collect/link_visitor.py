@@ -13,9 +13,9 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 import shutil
 
-from cloud_file_storage import CloudFileStorage
-from configuration_for_cloud_file_storage import ConfigurationForCloudFileStorage
-import last_run_recorder
+from src.visit_n_sites_and_collect.cloud_file_storage import CloudFileStorage
+from src.visit_n_sites_and_collect.configuration_for_cloud_file_storage import ConfigurationForCloudFileStorage
+from src.visit_n_sites_and_collect.last_run_recorder import LastRunRecorder
 
 
 def create_link_visitor_client_context_with_selenium(nid, npw):
@@ -254,7 +254,7 @@ class LinkVisitor:
         self.configuration_for_cloud_file_stroage = None   # The lifecycle of this object is handled by this object.
         self.cloud_file_storage = CloudFileStorage()
         self.visited_campaign_link_recorder = VisitedCampaignLinkController()
-        self.last_run_recorder = last_run_recorder.LastRunRecorder()
+        self.last_run_recorder = LastRunRecorder()
 
     def init_with_global_config(self, global_config: dict) -> None:
         # Configuration about Cloud File Storage is very local to this class. It's for modularity.
