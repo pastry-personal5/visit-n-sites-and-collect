@@ -7,6 +7,7 @@ try:
 except ImportError:
     from yaml import Loader
 
+
 def read_global_config() -> dict:
     """Read a global configuration.
 

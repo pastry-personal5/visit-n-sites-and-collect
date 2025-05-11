@@ -1,6 +1,8 @@
 """
 This file contains the class ConfigurationForCloudFileStorage.
 """
+
+
 class ConfigurationForCloudFileStorage:
     def __init__(self):
         """

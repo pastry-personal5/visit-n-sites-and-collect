@@ -43,6 +43,7 @@ class CleaningController:
             self.visited_campaign_link_controller.delete_all()
             logger.info(f"Cleanup completed for user ID: {nid}")
 
+
 def main():
     """
     Main function to clean the visited URLs file.
