@@ -26,7 +26,8 @@ class LinkFinderForC1WebSiteImpl(LinkFinderImplBase):
     def find_set_of_campaign_links(self, days_difference_since_last_run: int) -> set[str]:
         set_of_campaign_links = set()
         (target_base_url_list, template_list) = self.get_publisher_meta()
-        publisher_links_to_visit = publisher.create_publisher_links_to_visit(target_base_url_list, template_list, days_difference_since_last_run)
+        publisher_controller = publisher.PublisherController()
+        publisher_links_to_visit = publisher_controller.create_publisher_links_to_visit(target_base_url_list, template_list, days_difference_since_last_run)
         for publisher_link in publisher_links_to_visit:
             campaign_links = self.find_campaign_links(publisher_link)
             set_of_campaign_links.update(campaign_links)

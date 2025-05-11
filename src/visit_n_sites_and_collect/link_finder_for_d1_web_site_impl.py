@@ -30,7 +30,8 @@ class LinkFinderForD1WebSiteImpl(LinkFinderImplBase):
         campaign links.
         """
         (target_base_url_list, template_list) = self.get_publisher_meta()
-        publisher_links_to_visit = publisher.create_publisher_links_to_visit(target_base_url_list, template_list, days_difference_since_last_run)
+        publisher_controller = publisher.PublisherController()
+        publisher_links_to_visit = publisher_controller.create_publisher_links_to_visit(target_base_url_list, template_list, days_difference_since_last_run)
         set_of_campaign_links = set()
 
         for publisher_link in publisher_links_to_visit:
