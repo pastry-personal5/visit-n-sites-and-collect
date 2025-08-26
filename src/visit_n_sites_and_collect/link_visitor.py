@@ -25,7 +25,11 @@ def create_link_visitor_client_context_with_selenium(nid, npw):
     client_context = LinkVisitorClientContext()
     client_context.driver = driver
 
-    visit_login_page(driver, nid, npw)
+    login_result = visit_login_page(driver, nid, npw)
+    if not login_result:
+        logger.error(f"Failed to log in with ID: {nid}. Please check your credentials.")
+        client_context.clean_up()
+        return None
 
     return client_context
 
@@ -51,17 +55,35 @@ def wait_for_page_load(driver):
 
 
 def visit_login_page(driver, nid, npw):
-    driver.get("https://new-m.pay.naver.com/pcpay?page=1")
-    const_time_to_wait = 16
-    WebDriverWait(driver, const_time_to_wait).until(EC.presence_of_element_located((By.ID, "id")))
+    """
 
-    element_for_id = driver.find_element(by=By.ID, value="id")
-    element_for_password = driver.find_element(by=By.ID, value="pw")
-    element_for_submission = driver.find_element(by=By.ID, value="submit_btn")  # Previously, the HTML element ID was log.login
+    """
+    driver.get("https://new-m.pay.naver.com/pcpay?page=1")
+    const_time_to_wait_in_sec = 16
+
+    const_html_element_id_for_id = "id"
+    const_html_element_id_for_password = "pw"
+    const_html_element_id_for_submission = "log.login"
+
+    try:
+        WebDriverWait(driver, const_time_to_wait_in_sec).until(EC.presence_of_element_located((By.ID, const_html_element_id_for_id)))
+    except SC.exceptions.TimeoutException:
+        logger.error("Timeout while waiting for the login page to load.")
+        return False
+    except SC.exceptions.NoSuchElementException:
+        logger.error("Login page elements not found.")
+        return False
+
+    try:
+        element_for_id = driver.find_element(by=By.ID, value=const_html_element_id_for_id)
+        element_for_password = driver.find_element(by=By.ID, value=const_html_element_id_for_password)
+        element_for_submission = driver.find_element(by=By.ID, value=const_html_element_id_for_submission)
+    except SC.exceptions.NoSuchElementException as e:
+        logger.error(f"Required elements for login not found: {e}")
+        return False
 
     element_for_id.send_keys(nid)
     element_for_password.send_keys(npw)
-
     element_for_submission.click()
 
     wait_for_page_load(driver)
@@ -73,6 +95,7 @@ def visit_login_page(driver, nid, npw):
             wait_for_page_load(driver)
     except SC.exceptions.NoSuchElementException:
         pass
+    return True
 
 
 def create_link_visitor_client_context(nid, npw):

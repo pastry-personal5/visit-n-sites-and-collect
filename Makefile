@@ -10,7 +10,7 @@ checkmake:
 clean: clean_visited_urls
 
 clean_visited_urls:
-	python ${SOURCE_CODE_PATH}/clean_visited_urls.py
+	python -m src.visit_n_sites_and_collect.clean_visited_urls
 
 lint:
 	pylint --rcfile=./.pylintrc ${SOURCE_CODE_PATH}/*.py || true
@@ -22,6 +22,6 @@ style:
 	pycodestyle --max-line-length=${PYCODESTYLE_MAX_LINE_LENGTH} ${SOURCE_CODE_PATH}/*.py || true
 
 unittest:
-#	python -m unittest tests/*.py
+	python -m unittest tests/*.py
 
 test: unittest
