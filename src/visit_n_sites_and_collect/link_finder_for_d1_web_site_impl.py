@@ -1,12 +1,69 @@
 from bs4 import BeautifulSoup
 from loguru import logger
-import requests
+
+import selenium
+from selenium import webdriver
+from selenium.common.exceptions import WebDriverException
 
 from src.visit_n_sites_and_collect.link_finder_impl_base import LinkFinderImplBase
 from src.visit_n_sites_and_collect.publisher import PublisherController
+from src.visit_n_sites_and_collect.article_link_to_campaign_link_cache import ArticleLinkToCampaignLinkCache
+
+
+class WebBrowserClient():
+    def __init__(self):
+        self.driver = None
+
+    def prepare(self) -> None:
+        try:
+            self.driver = webdriver.Chrome()
+            self.driver.implicitly_wait(0.5)
+        except WebDriverException as e:
+            logger.error("Failed to initialize Chrome WebDriver.")
+            logger.error(e)
+            self.driver = None
+
+    def cleanup(self) -> None:
+        if self.driver:
+            try:
+                self.driver.quit()
+            except Exception as e:
+                logger.warning("Exception during browser cleanup.")
+                logger.warning(e)
+
+    def visit(self, url: str) -> bool:
+        if not self.driver:
+            logger.error("WebDriver not initialized.")
+            return False
+        try:
+            self.driver.get(url)
+            return True
+        except selenium.common.exceptions.WebDriverException as e:
+            logger.error(f"Error visiting {url}")
+            logger.error(e)
+            return False
+
+    def get_page_source(self) -> str:
+        if not self.driver:
+            logger.error("WebDriver not initialized.")
+            return ""
+        try:
+            return self.driver.page_source
+        except Exception as e:
+            logger.error("Error getting page source.")
+            logger.error(e)
+            return ""
 
 
 class LinkFinderForD1WebSiteImpl(LinkFinderImplBase):
+
+    def __init__(self, article_link_to_campaign_link_cache: ArticleLinkToCampaignLinkCache):
+        super().__init__(article_link_to_campaign_link_cache)
+        self.web_browser_client = WebBrowserClient()
+        self.web_browser_client.prepare()
+
+    def cleanup(self) -> None:
+        self.web_browser_client.cleanup()
 
     def get_publisher_meta(self) -> tuple[str, str]:
         target_base_url_list = [
@@ -84,13 +141,22 @@ class LinkFinderForD1WebSiteImpl(LinkFinderImplBase):
 
         # Cache miss.
         list_of_campaign_links = []
+
+        logger.info(f"Visiting ({article_link})...")
         try:
-            logger.info(f"Visiting ({article_link})...")
-            res = requests.get(article_link)
-        except requests.exceptions.ConnectionError:
-            logger.warning(f"Could not get the link: ({article_link}). Continue...")
-            return
-        inner_soup = BeautifulSoup(res.text, "html.parser")
+            if not self.web_browser_client.visit(article_link):
+                logger.error(f"Failed to visit {article_link}")
+                return []
+            res = self.web_browser_client.get_page_source()
+            inner_soup = BeautifulSoup(res, "html.parser")
+        except selenium.common.exceptions.WebDriverException as e:
+            logger.error(f"Selenium WebDriverException while processing article link: {article_link}")
+            logger.error(e)
+            return []
+        except Exception as e:
+            logger.error(f"Unexpected exception while processing article link: {article_link}")
+            logger.error(e)
+            return []
 
         # Find all links that start with the campaign URL
         for a_tag in inner_soup.find_all("a", href=True):
@@ -125,11 +191,21 @@ class LinkFinderForD1WebSiteImpl(LinkFinderImplBase):
         """
         # Send a request to the |publisher_link|
         logger.info(f"Visiting ({publisher_link})...")
+
         try:
-            response = requests.get(publisher_link)
-        except requests.exceptions.ConnectionError:
+            if not self.web_browser_client.visit(publisher_link):
+                logger.error(f"Failed to visit {publisher_link}")
+                return []
+            res = self.web_browser_client.get_page_source()
+            soup = BeautifulSoup(res, "html.parser")
+        except selenium.common.exceptions.WebDriverException as e:
+            logger.error(f"Selenium WebDriverException while processing publisher link: {publisher_link}")
+            logger.error(e)
             return []
-        soup = BeautifulSoup(response.text, "html.parser")
+        except Exception as e:
+            logger.error(f"Unexpected exception while processing publisher link: {publisher_link}")
+            logger.error(e)
+            return []
 
         # Find all <li> elements with class 'list-group-item' and get <a> elements
         list_of_article_elements = soup.find_all("li", class_="list-group-item")

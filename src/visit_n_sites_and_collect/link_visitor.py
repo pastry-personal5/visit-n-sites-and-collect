@@ -58,12 +58,14 @@ def visit_login_page(driver, nid, npw):
     """
 
     """
-    driver.get("https://new-m.pay.naver.com/pcpay?page=1")
-    const_time_to_wait_in_sec = 16
 
+    const_time_to_wait_in_sec = 16
     const_html_element_id_for_id = "id"
     const_html_element_id_for_password = "pw"
     const_html_element_id_for_submission = "log.login"
+    const_login_page_url = "https://new-m.pay.naver.com/pcpay?page=1"
+
+    driver.get(const_login_page_url)
 
     try:
         WebDriverWait(driver, const_time_to_wait_in_sec).until(EC.presence_of_element_located((By.ID, const_html_element_id_for_id)))
@@ -76,15 +78,15 @@ def visit_login_page(driver, nid, npw):
 
     try:
         element_for_id = driver.find_element(by=By.ID, value=const_html_element_id_for_id)
-        element_for_password = driver.find_element(by=By.ID, value=const_html_element_id_for_password)
-        element_for_submission = driver.find_element(by=By.ID, value=const_html_element_id_for_submission)
+    #     element_for_password = driver.find_element(by=By.ID, value=const_html_element_id_for_password)
+    #     element_for_submission = driver.find_element(by=By.ID, value=const_html_element_id_for_submission)
     except SC.exceptions.NoSuchElementException as e:
         logger.error(f"Required elements for login not found: {e}")
         return False
 
     element_for_id.send_keys(nid)
-    element_for_password.send_keys(npw)
-    element_for_submission.click()
+    # element_for_password.send_keys(npw)
+    # element_for_submission.click()
 
     wait_for_page_load(driver)
 
@@ -274,7 +276,7 @@ class LinkVisitorClientContext:
 class LinkVisitor:
 
     def __init__(self):
-        self.configuration_for_cloud_file_stroage = None   # The lifecycle of this object is handled by this object.
+        self.configuration_for_cloud_file_storage = None   # The lifecycle of this object is handled by this object.
         self.cloud_file_storage = CloudFileStorage()
         self.visited_campaign_link_recorder = VisitedCampaignLinkController()
         self.last_run_recorder = LastRunRecorder()
@@ -282,13 +284,13 @@ class LinkVisitor:
     def init_with_global_config(self, global_config: dict) -> None:
         # Configuration about Cloud File Storage is very local to this class. It's for modularity.
         # Therefore, if one can, let's initialize it from `global_config.`
-        # i.e. Initialize `self.configuration_for_cloud_file_stroage` with the given configuration, if available.
+        # i.e. Initialize `self.configuration_for_cloud_file_storage` with the given configuration, if available.
         if "cloud_file_storage" in global_config:
             global_config_for_cloud_file_storage = global_config["cloud_file_storage"]
             if "folder_id_for_parent" in global_config_for_cloud_file_storage:
-                self.configuration_for_cloud_file_stroage = ConfigurationForCloudFileStorage()
-                self.configuration_for_cloud_file_stroage.init_with_core_config(global_config_for_cloud_file_storage["folder_id_for_parent"])
-        self.visited_campaign_link_recorder.init_with_cloud_file_storage(self.configuration_for_cloud_file_stroage, self.cloud_file_storage)
+                self.configuration_for_cloud_file_storage = ConfigurationForCloudFileStorage()
+                self.configuration_for_cloud_file_storage.init_with_core_config(global_config_for_cloud_file_storage["folder_id_for_parent"])
+        self.visited_campaign_link_recorder.init_with_cloud_file_storage(self.configuration_for_cloud_file_storage, self.cloud_file_storage)
 
     def visit_all(self, nid, npw, set_of_campaign_links: set[str]) -> None:
         # It creates a Naver session and visit campaign links.

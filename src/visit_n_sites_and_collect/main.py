@@ -56,6 +56,10 @@ class MainController:
         self.link_finders.append(c1_link_finder)
         self.link_finders.append(d1_link_finder)
 
+    def cleanup(self):
+        for link_finder in self.link_finders:
+            link_finder.cleanup()
+
     def find_and_visit_all_with_global_config(self, global_config: dict):
         self._init_with_global_config(global_config)
         # This method is a main entry point.
@@ -113,6 +117,7 @@ def main() -> None:
         sys.exit(-1)
 
     main_controller.find_and_visit_all_with_global_config(global_config)
+    main_controller.cleanup()
 
 
 if __name__ == "__main__":
