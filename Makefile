@@ -7,7 +7,7 @@ all: checkmake shellcheck style lint test
 checkmake:
 	checkmake ./Makefile
 
-clean: clean_visited_urls
+clean_data: clean_visited_urls
 
 clean_visited_urls:
 	python -m src.visit_n_sites_and_collect.clean_visited_urls
