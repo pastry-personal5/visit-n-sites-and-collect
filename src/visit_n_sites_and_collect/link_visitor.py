@@ -202,7 +202,7 @@ class VisitedCampaignLinkController(VisitedCampaignLinkControllerBase):
         # Prepare
         gzipped_file_path = self._get_gzipped_full_visited_urls_file_path()
         file_path = self._get_full_visited_urls_file_path()
-        # Dwonload a file from the cloud if available.
+        # Download a file from the cloud if available.
         if self.configuration_for_cloud_file_storage and self.configuration_for_cloud_file_storage.has_valid_cloud_file_storage_config():
             self.cloud_file_storage.download(
                 gzipped_file_path,
