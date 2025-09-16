@@ -149,11 +149,11 @@ class VisitedCampaignLinkController(VisitedCampaignLinkControllerBase):
     def __init__(self):
         self.nid = None
         self.visited_links = None
-        self.configuration_for_cloud_file_stroage = None  # This can be None. This is a configuration for cloud file storage.
+        self.configuration_for_cloud_file_storage = None  # This can be None. This is a configuration for cloud file storage.
         self.cloud_file_storage = None
 
-    def init_with_cloud_file_storage(self, configuration_for_cloud_file_stroage: ConfigurationForCloudFileStorage, cloud_file_storage: CloudFileStorage) -> None:
-        self.configuration_for_cloud_file_stroage = configuration_for_cloud_file_stroage
+    def init_with_cloud_file_storage(self, configuration_for_cloud_file_storage: ConfigurationForCloudFileStorage, cloud_file_storage: CloudFileStorage) -> None:
+        self.configuration_for_cloud_file_storage = configuration_for_cloud_file_storage
         self.cloud_file_storage = cloud_file_storage
 
     def reset_with_nid(self, nid: str) -> None:
@@ -203,10 +203,10 @@ class VisitedCampaignLinkController(VisitedCampaignLinkControllerBase):
         gzipped_file_path = self._get_gzipped_full_visited_urls_file_path()
         file_path = self._get_full_visited_urls_file_path()
         # Dwonload a file from the cloud if available.
-        if self.configuration_for_cloud_file_stroage and self.configuration_for_cloud_file_stroage.has_valid_cloud_file_storage_config():
+        if self.configuration_for_cloud_file_storage and self.configuration_for_cloud_file_storage.has_valid_cloud_file_storage_config():
             self.cloud_file_storage.download(
                 gzipped_file_path,
-                self.configuration_for_cloud_file_stroage.folder_id_of_parent_of_cloud_file_storage,
+                self.configuration_for_cloud_file_storage.folder_id_of_parent_of_cloud_file_storage,
             )
         else:
             logger.warning("While trying to read visited campaign links, one has found that the cloud file storage configuration is invalid. Look for the main configuration file.")
@@ -236,10 +236,10 @@ class VisitedCampaignLinkController(VisitedCampaignLinkControllerBase):
         self._compress_file(file_path, gzipped_file_path)
         logger.info(f"One has saved and gzipped: ({gzipped_file_path})")
         # Upload
-        if self.configuration_for_cloud_file_stroage.has_valid_cloud_file_storage_config():
+        if self.configuration_for_cloud_file_storage.has_valid_cloud_file_storage_config():
             self.cloud_file_storage.upload(
                 gzipped_file_path,
-                self.configuration_for_cloud_file_stroage.folder_id_of_parent_of_cloud_file_storage,
+                self.configuration_for_cloud_file_storage.folder_id_of_parent_of_cloud_file_storage,
             )
         else:
             logger.warning("While trying to write visited campaign links, one has found that the cloud file storage configuration is invalid. Look for the main configuration file.")
@@ -254,10 +254,10 @@ class VisitedCampaignLinkController(VisitedCampaignLinkControllerBase):
         except FileNotFoundError:
             pass
 
-        if self.configuration_for_cloud_file_stroage.has_valid_cloud_file_storage_config():
+        if self.configuration_for_cloud_file_storage.has_valid_cloud_file_storage_config():
             self.cloud_file_storage.delete(
                 gzipped_file_path,
-                self.configuration_for_cloud_file_stroage.folder_id_of_parent_of_cloud_file_storage,
+                self.configuration_for_cloud_file_storage.folder_id_of_parent_of_cloud_file_storage,
             )
         else:
             logger.warning("While trying to write visited campaign links, one has found that the cloud file storage configuration is invalid. Look for the main configuration file.")

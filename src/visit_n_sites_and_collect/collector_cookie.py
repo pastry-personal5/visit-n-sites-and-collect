@@ -60,7 +60,7 @@ class CollectorCookieController:
         content = {}
         content["nid"] = nid
         date_of_last_run = cookie.date_of_last_run
-        content["date_of_last_run"] = "%04d-%002d-%02d" % (
+        content["date_of_last_run"] = "%04d-%02d-%02d" % (
             date_of_last_run.year,
             date_of_last_run.month,
             date_of_last_run.day,
