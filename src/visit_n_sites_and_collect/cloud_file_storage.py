@@ -21,7 +21,7 @@ class CloudFileStorage:
     """
 
     # Scopes for Google Drive API
-    SCOPES = ["https://www.googleapis.com/auth/drive.file"]
+    SCOPES = ["https://www.googleapis.com/auth/drive"]
 
     def __init__(self):
         self.flag_authenticated = False
