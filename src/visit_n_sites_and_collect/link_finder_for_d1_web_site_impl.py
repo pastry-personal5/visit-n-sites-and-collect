@@ -1,9 +1,12 @@
+import time
+
 from bs4 import BeautifulSoup
 from loguru import logger
-
 import selenium
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
+
+import undetected_chromedriver as UC
 
 from src.visit_n_sites_and_collect.link_finder_impl_base import LinkFinderImplBase
 from src.visit_n_sites_and_collect.publisher import PublisherController
@@ -16,7 +19,7 @@ class WebBrowserClient():
 
     def prepare(self) -> None:
         try:
-            self.driver = webdriver.Chrome()
+            self.driver = UC.Chrome()
             self.driver.implicitly_wait(0.5)
         except WebDriverException as e:
             logger.error("Failed to initialize Chrome WebDriver.")
@@ -147,6 +150,8 @@ class LinkFinderForD1WebSiteImpl(LinkFinderImplBase):
             if not self.web_browser_client.visit(article_link):
                 logger.error(f"Failed to visit {article_link}")
                 return []
+            time_to_wait_in_sec = 1
+            time.sleep(time_to_wait_in_sec)
             res = self.web_browser_client.get_page_source()
             inner_soup = BeautifulSoup(res, "html.parser")
         except selenium.common.exceptions.WebDriverException as e:
@@ -196,6 +201,8 @@ class LinkFinderForD1WebSiteImpl(LinkFinderImplBase):
             if not self.web_browser_client.visit(publisher_link):
                 logger.error(f"Failed to visit {publisher_link}")
                 return []
+            time_to_wait_in_sec = 1
+            time.sleep(time_to_wait_in_sec)
             res = self.web_browser_client.get_page_source()
             soup = BeautifulSoup(res, "html.parser")
         except selenium.common.exceptions.WebDriverException as e:
