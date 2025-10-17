@@ -1,0 +1,21 @@
+[project]
+name = "visit-n-sites-and-collect"
+version = "1.0.0"
+description = "Visit N sites and collect."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "bs4>=0.0.2",
+    "google-api-python-client>=2.184.0",
+    "loguru>=0.7.3",
+    "selenium>=4.36.0",
+    "undetected-chromedriver>=3.5.5",
+]
+
+[dependency-groups]
+dev = [
+    "black>=25.9.0",
+    "mypy>=1.18.2",
+    "pytest>=8.4.2",
+    "yamllint>=1.37.1",
+]
