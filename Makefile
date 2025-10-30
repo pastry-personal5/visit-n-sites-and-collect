@@ -22,6 +22,6 @@ style:
 	pycodestyle --max-line-length=${PYCODESTYLE_MAX_LINE_LENGTH} ${SOURCE_CODE_PATH}/*.py || true
 
 unittest:
-	python -m unittest tests/*.py
+	uv run --python 3.11 python -m unittest tests/*.py
 
 test: unittest

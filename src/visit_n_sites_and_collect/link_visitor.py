@@ -151,6 +151,7 @@ class VisitedCampaignLinkController(VisitedCampaignLinkControllerBase):
         self.visited_links = None
         self.configuration_for_cloud_file_storage = None  # This can be None. This is a configuration for cloud file storage.
         self.cloud_file_storage = None
+        self.flag_use_cloud_file_storage = False
 
     def init_with_cloud_file_storage(self, configuration_for_cloud_file_storage: ConfigurationForCloudFileStorage, cloud_file_storage: CloudFileStorage) -> None:
         self.configuration_for_cloud_file_storage = configuration_for_cloud_file_storage
@@ -202,14 +203,19 @@ class VisitedCampaignLinkController(VisitedCampaignLinkControllerBase):
         # Prepare
         gzipped_file_path = self._get_gzipped_full_visited_urls_file_path()
         file_path = self._get_full_visited_urls_file_path()
-        # Download a file from the cloud if available.
-        if self.configuration_for_cloud_file_storage and self.configuration_for_cloud_file_storage.has_valid_cloud_file_storage_config():
-            self.cloud_file_storage.download(
-                gzipped_file_path,
-                self.configuration_for_cloud_file_storage.folder_id_of_parent_of_cloud_file_storage,
-            )
-        else:
-            logger.warning("While trying to read visited campaign links, one has found that the cloud file storage configuration is invalid. Look for the main configuration file.")
+
+        if self.flag_use_cloud_file_storage:
+
+            # Download a file from the cloud if available.
+            if self.configuration_for_cloud_file_storage and self.configuration_for_cloud_file_storage.has_valid_cloud_file_storage_config():
+                self.cloud_file_storage.download(
+                    gzipped_file_path,
+                    self.configuration_for_cloud_file_storage.folder_id_of_parent_of_cloud_file_storage,
+                )
+            else:
+                logger.warning("While trying to read visited campaign links, one has found that the cloud file storage configuration is invalid. Look for the main configuration file.")
+
+        # Anyway, use local or downloaded one.
         # Gunzip
         try:
             self._decompress_file(gzipped_file_path, file_path)
@@ -235,14 +241,16 @@ class VisitedCampaignLinkController(VisitedCampaignLinkControllerBase):
         gzipped_file_path = self._get_gzipped_full_visited_urls_file_path()
         self._compress_file(file_path, gzipped_file_path)
         logger.info(f"One has saved and gzipped: ({gzipped_file_path})")
-        # Upload
-        if self.configuration_for_cloud_file_storage.has_valid_cloud_file_storage_config():
-            self.cloud_file_storage.upload(
-                gzipped_file_path,
-                self.configuration_for_cloud_file_storage.folder_id_of_parent_of_cloud_file_storage,
-            )
-        else:
-            logger.warning("While trying to write visited campaign links, one has found that the cloud file storage configuration is invalid. Look for the main configuration file.")
+
+        if self.flag_use_cloud_file_storage:
+            # Upload
+            if self.configuration_for_cloud_file_storage.has_valid_cloud_file_storage_config():
+                self.cloud_file_storage.upload(
+                    gzipped_file_path,
+                    self.configuration_for_cloud_file_storage.folder_id_of_parent_of_cloud_file_storage,
+                )
+            else:
+                logger.warning("While trying to write visited campaign links, one has found that the cloud file storage configuration is invalid. Look for the main configuration file.")
 
     def delete_all(self) -> None:
         file_path = self._get_full_visited_urls_file_path()
@@ -323,6 +331,15 @@ class LinkVisitor:
         nid,
         npw,
     ):
+        flag_use_cloud_file_storage = False
+
+        user_input = input("Use a cloud storage to manage a list of visited URLs? (y/n) ")
+        user_input = user_input.capitalize()
+        if user_input and user_input[0] == "Y":
+            flag_use_cloud_file_storage = True
+        logger.info(f"Use a cloud storage to manage a list of visited URLs? (True/False) {flag_use_cloud_file_storage}")
+        self.visited_campaign_link_recorder.flag_use_cloud_file_storage = flag_use_cloud_file_storage
+
         for campaign_link in set_of_campaign_links:
             if self.visited_campaign_link_recorder.is_visited_campaign_link(campaign_link):
                 continue  # Skip already visited links
