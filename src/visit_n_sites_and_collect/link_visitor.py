@@ -288,13 +288,19 @@ class LinkVisitor:
         self.cloud_file_storage = CloudFileStorage()
         self.visited_campaign_link_recorder = VisitedCampaignLinkController()
         self.last_run_recorder = LastRunRecorder()
+        self.flag_to_use_cloud_file_stroage = False
 
     def init_with_global_config(self, global_config: dict) -> None:
         # Configuration about Cloud File Storage is very local to this class. It's for modularity.
         # Therefore, if one can, let's initialize it from `global_config.`
         # i.e. Initialize `self.configuration_for_cloud_file_storage` with the given configuration, if available.
+        self.flag_to_use_cloud_file_stroage = False
         if "cloud_file_storage" in global_config:
             global_config_for_cloud_file_storage = global_config["cloud_file_storage"]
+            if "enabled" in global_config_for_cloud_file_storage:
+                value = global_config_for_cloud_file_storage["enabled"]
+                if value:
+                    self.flag_to_use_cloud_file_stroage = True
             if "folder_id_for_parent" in global_config_for_cloud_file_storage:
                 self.configuration_for_cloud_file_storage = ConfigurationForCloudFileStorage()
                 self.configuration_for_cloud_file_storage.init_with_core_config(global_config_for_cloud_file_storage["folder_id_for_parent"])
@@ -331,12 +337,7 @@ class LinkVisitor:
         nid,
         npw,
     ):
-        flag_use_cloud_file_storage = False
-
-        user_input = input("Use a cloud storage to manage a list of visited URLs? (y/n) ")
-        user_input = user_input.capitalize()
-        if user_input and user_input[0] == "Y":
-            flag_use_cloud_file_storage = True
+        flag_use_cloud_file_storage = self.flag_to_use_cloud_file_stroage
         logger.info(f"Use a cloud storage to manage a list of visited URLs? (True/False) {flag_use_cloud_file_storage}")
         self.visited_campaign_link_recorder.flag_use_cloud_file_storage = flag_use_cloud_file_storage
 
