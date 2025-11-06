@@ -218,11 +218,14 @@ class LinkFinderForD1WebSiteImpl(LinkFinderImplBase):
         list_of_article_elements = soup.find_all("li", class_="list-group-item")
         list_of_article_links = []
         for article_element in list_of_article_elements:
-            a_tag = article_element.find("a", href=True)
-            if a_tag and "네이버" in a_tag.text:
-                article_link = a_tag["href"]
-                if article_link.startswith("/promotion"):
-                    article_link = "https://damoang.net" + article_link
-                list_of_article_links.append(article_link)
+            a_tags = article_element.find_all("a", href=True)
+            if a_tags:
+                for a_tag in a_tags:
+                    if a_tag and "네이버" in a_tag.text and a_tag.has_attr("class") and ("da-article-link" in a_tag.get("class", [])):
+                        article_link = a_tag["href"]
+                        if article_link.startswith("/promotion"):
+                            article_link = "https://damoang.net" + article_link
+                        list_of_article_links.append(article_link)
+                        logger.info(f"article_link: ({article_link})")
 
         return list_of_article_links
