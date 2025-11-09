@@ -261,14 +261,14 @@ class VisitedCampaignLinkController(VisitedCampaignLinkControllerBase):
             os.remove(gzipped_file_path)
         except FileNotFoundError:
             pass
-
-        if self.configuration_for_cloud_file_storage.has_valid_cloud_file_storage_config():
-            self.cloud_file_storage.delete(
-                gzipped_file_path,
-                self.configuration_for_cloud_file_storage.folder_id_of_parent_of_cloud_file_storage,
-            )
-        else:
-            logger.warning("While trying to write visited campaign links, one has found that the cloud file storage configuration is invalid. Look for the main configuration file.")
+        if self.flag_use_cloud_file_storage:
+            if self.configuration_for_cloud_file_storage.has_valid_cloud_file_storage_config():
+                self.cloud_file_storage.delete(
+                    gzipped_file_path,
+                    self.configuration_for_cloud_file_storage.folder_id_of_parent_of_cloud_file_storage,
+                )
+            else:
+                logger.warning("While trying to write visited campaign links, one has found that the cloud file storage configuration is invalid. Look for the main configuration file.")
 
 
 class LinkVisitorClientContext:
@@ -288,19 +288,19 @@ class LinkVisitor:
         self.cloud_file_storage = CloudFileStorage()
         self.visited_campaign_link_recorder = VisitedCampaignLinkController()
         self.last_run_recorder = LastRunRecorder()
-        self.flag_to_use_cloud_file_stroage = False
+        self.flag_to_use_cloud_file_storage = False
 
     def init_with_global_config(self, global_config: dict) -> None:
         # Configuration about Cloud File Storage is very local to this class. It's for modularity.
         # Therefore, if one can, let's initialize it from `global_config.`
         # i.e. Initialize `self.configuration_for_cloud_file_storage` with the given configuration, if available.
-        self.flag_to_use_cloud_file_stroage = False
+        self.flag_to_use_cloud_file_storage = False
         if "cloud_file_storage" in global_config:
             global_config_for_cloud_file_storage = global_config["cloud_file_storage"]
             if "enabled" in global_config_for_cloud_file_storage:
                 value = global_config_for_cloud_file_storage["enabled"]
                 if value:
-                    self.flag_to_use_cloud_file_stroage = True
+                    self.flag_to_use_cloud_file_storage = True
             if "folder_id_for_parent" in global_config_for_cloud_file_storage:
                 self.configuration_for_cloud_file_storage = ConfigurationForCloudFileStorage()
                 self.configuration_for_cloud_file_storage.init_with_core_config(global_config_for_cloud_file_storage["folder_id_for_parent"])
@@ -316,7 +316,7 @@ class LinkVisitor:
         self.visited_campaign_link_recorder.reset_with_nid(nid)
 
         self._prepare_visit(nid)
-        self._visit(set_of_campaign_links, client_context, nid, npw)
+        client_context = self._visit(set_of_campaign_links, client_context, nid, npw)
         self._finish_visit(nid)
 
         if client_context:
@@ -337,7 +337,7 @@ class LinkVisitor:
         nid,
         npw,
     ):
-        flag_use_cloud_file_storage = self.flag_to_use_cloud_file_stroage
+        flag_use_cloud_file_storage = self.flag_to_use_cloud_file_storage
         logger.info(f"Use a cloud storage to manage a list of visited URLs? (True/False) {flag_use_cloud_file_storage}")
         self.visited_campaign_link_recorder.flag_use_cloud_file_storage = flag_use_cloud_file_storage
 
@@ -379,3 +379,5 @@ class LinkVisitor:
                 logger.warning(f"Unexpected alert on {campaign_link}, skipping...")
 
             WebDriverWait(driver, 5).until(lambda d: True)  # Acts as a non-blocking sleep
+
+        return client_context

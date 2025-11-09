@@ -25,7 +25,7 @@ class CleaningController:
     def __init__(self):
         self.cloud_file_storage = CloudFileStorage()
         self.visited_campaign_link_controller = VisitedCampaignLinkController()
-        configuration_for_cloud_file_storage = None
+        self.configuration_for_cloud_file_storage = None
 
     def delete_all(self, global_config: dict) -> None:
         if "cloud_file_storage" in global_config:
