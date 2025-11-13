@@ -16,6 +16,7 @@ import shutil
 from src.visit_n_sites_and_collect.cloud_file_storage import CloudFileStorage
 from src.visit_n_sites_and_collect.configuration_for_cloud_file_storage import ConfigurationForCloudFileStorage
 from src.visit_n_sites_and_collect.last_run_recorder import LastRunRecorder
+from src.visit_n_sites_and_collect.global_config import GlobalConfigIR
 
 
 def create_link_visitor_client_context_with_selenium(nid, npw):
@@ -244,7 +245,7 @@ class VisitedCampaignLinkController(VisitedCampaignLinkControllerBase):
 
         if self.flag_use_cloud_file_storage:
             # Upload
-            if self.configuration_for_cloud_file_storage.has_valid_cloud_file_storage_config():
+            if self.configuration_for_cloud_file_storage and self.configuration_for_cloud_file_storage.has_valid_cloud_file_storage_config():
                 self.cloud_file_storage.upload(
                     gzipped_file_path,
                     self.configuration_for_cloud_file_storage.folder_id_of_parent_of_cloud_file_storage,
@@ -258,11 +259,14 @@ class VisitedCampaignLinkController(VisitedCampaignLinkControllerBase):
         logger.info(f"Deleting if exist: ({file_path}) and ({gzipped_file_path})...")
         try:
             os.remove(file_path)
+        except FileNotFoundError:
+            pass
+        try:
             os.remove(gzipped_file_path)
         except FileNotFoundError:
             pass
         if self.flag_use_cloud_file_storage:
-            if self.configuration_for_cloud_file_storage.has_valid_cloud_file_storage_config():
+            if self.configuration_for_cloud_file_storage and self.configuration_for_cloud_file_storage.has_valid_cloud_file_storage_config():
                 self.cloud_file_storage.delete(
                     gzipped_file_path,
                     self.configuration_for_cloud_file_storage.folder_id_of_parent_of_cloud_file_storage,
@@ -290,10 +294,11 @@ class LinkVisitor:
         self.last_run_recorder = LastRunRecorder()
         self.flag_to_use_cloud_file_storage = False
 
-    def init_with_global_config(self, global_config: dict) -> None:
+    def init_with_global_config(self, global_config_ir: GlobalConfigIR) -> None:
         # Configuration about Cloud File Storage is very local to this class. It's for modularity.
         # Therefore, if one can, let's initialize it from `global_config.`
         # i.e. Initialize `self.configuration_for_cloud_file_storage` with the given configuration, if available.
+        global_config = global_config_ir.config
         self.flag_to_use_cloud_file_storage = False
         if "cloud_file_storage" in global_config:
             global_config_for_cloud_file_storage = global_config["cloud_file_storage"]

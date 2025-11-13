@@ -9,7 +9,7 @@ It reads the global configuration from a file and uses it to initialize the Clou
 
 from loguru import logger
 
-from src.visit_n_sites_and_collect.global_config import read_global_config
+from src.visit_n_sites_and_collect.global_config import GlobalConfigController, GlobalConfigIR
 
 from src.visit_n_sites_and_collect.cloud_file_storage import CloudFileStorage
 from src.visit_n_sites_and_collect.configuration_for_cloud_file_storage import ConfigurationForCloudFileStorage
@@ -27,12 +27,15 @@ class CleaningController:
         self.visited_campaign_link_controller = VisitedCampaignLinkController()
         self.configuration_for_cloud_file_storage = None
 
-    def delete_all(self, global_config: dict) -> None:
+    def delete_all(self, global_config_ir: GlobalConfigIR) -> None:
+        global_config = global_config_ir.config
         if "cloud_file_storage" in global_config:
             global_config_for_cloud_file_storage = global_config["cloud_file_storage"]
-            if "folder_id_for_parent" in global_config_for_cloud_file_storage:
-                self.configuration_for_cloud_file_storage = ConfigurationForCloudFileStorage()
-                self.configuration_for_cloud_file_storage.init_with_core_config(global_config_for_cloud_file_storage["folder_id_for_parent"])
+            if "enabled" in global_config_for_cloud_file_storage:
+                if "folder_id_for_parent" in global_config_for_cloud_file_storage:
+                    self.configuration_for_cloud_file_storage = ConfigurationForCloudFileStorage()
+                    self.configuration_for_cloud_file_storage.init_with_core_config(global_config_for_cloud_file_storage["folder_id_for_parent"])
+                    self.visited_campaign_link_controller.flag_use_cloud_file_storage = True
         self.visited_campaign_link_controller.init_with_cloud_file_storage(self.configuration_for_cloud_file_storage, self.cloud_file_storage)
 
         users = global_config["users"]
@@ -49,13 +52,14 @@ def main():
     Main function to clean the visited URLs file.
     """
     # Read the global configuration
-    global_config = read_global_config()
-    if not global_config:
+    global_config_controller = GlobalConfigController()
+    global_config_ir = global_config_controller.read_global_config()
+    if not global_config_ir:
         logger.error("Failed to read global configuration.")
         return
 
     cleaning_controller = CleaningController()
-    cleaning_controller.delete_all(global_config)
+    cleaning_controller.delete_all(global_config_ir)
 
 
 if __name__ == "__main__":

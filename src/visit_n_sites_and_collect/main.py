@@ -18,7 +18,7 @@ from src.visit_n_sites_and_collect.last_run_recorder import LastRunRecorder
 from src.visit_n_sites_and_collect.link_finder_for_c1_web_site_impl import LinkFinderForC1WebSiteImpl
 from src.visit_n_sites_and_collect.link_finder_for_d1_web_site_impl import LinkFinderForD1WebSiteImpl
 from src.visit_n_sites_and_collect.link_visitor import LinkVisitor
-from src.visit_n_sites_and_collect.global_config import read_global_config
+from src.visit_n_sites_and_collect.global_config import GlobalConfigController, GlobalConfigIR
 
 
 class LinkFinderFactory:
@@ -60,10 +60,10 @@ class MainController:
         for link_finder in self.link_finders:
             link_finder.cleanup()
 
-    def find_and_visit_all_with_global_config(self, global_config: dict):
-        self._init_with_global_config(global_config)
+    def find_and_visit_all_with_global_config(self, global_config_ir: GlobalConfigIR):
+        self._init_with_global_config(global_config_ir)
         # This method is a main entry point.
-        users = global_config["users"]
+        users = global_config_ir.config["users"]
         for user in users:
             nid = user["id"]
             npw = user["pw"]
@@ -72,8 +72,8 @@ class MainController:
             # (2) Let's visit.
             self._visit_all(nid, npw, set_of_campaign_links)
 
-    def _init_with_global_config(self, global_config: dict):
-        self.link_visitor.init_with_global_config(global_config)
+    def _init_with_global_config(self, global_config_ir: GlobalConfigIR):
+        self.link_visitor.init_with_global_config(global_config_ir)
 
     def _find_all(self, nid) -> set[str]:
         days_difference_since_last_run = self._get_days_difference_since_last_run(nid)
@@ -111,11 +111,8 @@ class MainController:
 
 def main() -> None:
     main_controller = MainController()
-    global_config = read_global_config()
-    if not global_config:
-        logger.error("The config file is not valid.")
-        sys.exit(-1)
-
+    global_config_controller = GlobalConfigController()
+    global_config = global_config_controller.read_global_config()
     main_controller.find_and_visit_all_with_global_config(global_config)
     main_controller.cleanup()
 
