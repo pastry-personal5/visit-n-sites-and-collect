@@ -772,7 +772,7 @@ socks = [
 [[package]]
 name = "visit-n-sites-and-collect"
 version = "1.0.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "bs4" },
     { name = "google-api-core" },

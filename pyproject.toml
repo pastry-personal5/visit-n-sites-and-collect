@@ -22,3 +22,10 @@ dev = [
     "pytest>=8.4.2",
     "yamllint>=1.37.1",
 ]
+
+[build-system]
+requires = ["setuptools>=69.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

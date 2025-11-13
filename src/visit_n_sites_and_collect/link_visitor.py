@@ -17,6 +17,7 @@ from src.visit_n_sites_and_collect.cloud_file_storage import CloudFileStorage
 from src.visit_n_sites_and_collect.configuration_for_cloud_file_storage import ConfigurationForCloudFileStorage
 from src.visit_n_sites_and_collect.last_run_recorder import LastRunRecorder
 from src.visit_n_sites_and_collect.global_config import GlobalConfigIR
+from src.visit_n_sites_and_collect.constants import Constants
 
 
 def create_link_visitor_client_context_with_selenium(nid, npw):
@@ -182,13 +183,15 @@ class VisitedCampaignLinkController(VisitedCampaignLinkControllerBase):
 
     def _get_full_visited_urls_file_path(self):
         assert self.nid is not None
-        full_visited_urls_file_path = f"visited_urls.{self.nid}.txt"
-        return full_visited_urls_file_path
+        full_visited_urls_file_name = f"visited_urls.{self.nid}.txt"
+        file_path = os.path.join(Constants.data_dir_path, full_visited_urls_file_name)
+        return file_path
 
     def _get_gzipped_full_visited_urls_file_path(self):
         assert self.nid is not None
-        gzipped_full_visited_urls_file_path = f"visited_urls.{self.nid}.txt.gz"
-        return gzipped_full_visited_urls_file_path
+        gzipped_full_visited_urls_file_name = f"visited_urls.{self.nid}.txt.gz"
+        file_path = os.path.join(Constants.data_dir_path, gzipped_full_visited_urls_file_name)
+        return file_path
 
     def _compress_file(self, input_file, output_file):
         with open(input_file, "rb") as f_in:
