@@ -6,12 +6,12 @@ import time
 import gzip
 from loguru import logger
 import selenium
-from selenium import common as SC
-from selenium import webdriver
+import selenium.common as SC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 import shutil
+import undetected_chromedriver as UC
 
 from src.visit_n_sites_and_collect.cloud_file_storage import CloudFileStorage
 from src.visit_n_sites_and_collect.configuration_for_cloud_file_storage import ConfigurationForCloudFileStorage
@@ -21,7 +21,7 @@ from src.visit_n_sites_and_collect.constants import Constants
 
 
 def create_link_visitor_client_context_with_selenium(nid, npw):
-    driver = webdriver.Chrome()
+    driver = UC.Chrome()
     driver.implicitly_wait(0.5)
 
     client_context = LinkVisitorClientContext()
