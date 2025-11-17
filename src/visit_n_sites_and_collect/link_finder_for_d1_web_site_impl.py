@@ -150,7 +150,7 @@ class LinkFinderForD1WebSiteImpl(LinkFinderImplBase):
             if not self.web_browser_client.visit(article_link):
                 logger.error(f"Failed to visit {article_link}")
                 return []
-            time_to_wait_in_sec = 1
+            time_to_wait_in_sec = 0.2
             time.sleep(time_to_wait_in_sec)
             res = self.web_browser_client.get_page_source()
             inner_soup = BeautifulSoup(res, "html.parser")
