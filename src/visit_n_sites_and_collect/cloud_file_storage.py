@@ -1,13 +1,15 @@
+import json
+import keyring
 import os
-import pickle
+from pathlib import Path
 
-from googleapiclient.discovery import build
-from googleapiclient.errors import UnknownApiNameOrVersion
-from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
-from google.auth.exceptions import MutualTLSChannelError, RefreshError
+
 from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 from google.auth.transport.requests import Request
 from loguru import logger
+from google.oauth2.credentials import Credentials
 
 
 class CloudFileStorage:
@@ -22,63 +24,45 @@ class CloudFileStorage:
 
     # Scopes for Google Drive API
     SCOPES = ["https://www.googleapis.com/auth/drive"]
+    SERVICE_NAME = "google-workspace-quick-tools-v0001"
+    TOKEN_KEY = "google-workspace-quick-tools-user-token"
 
     def __init__(self):
         self.flag_authenticated = False
         self.drive_service = None
 
+    def _load_credentials(self):
+        token_json = keyring.get_password(CloudFileStorage.SERVICE_NAME, CloudFileStorage.TOKEN_KEY)
+        if token_json:
+            creds_data = json.loads(token_json)
+            return Credentials.from_authorized_user_info(creds_data, CloudFileStorage.SCOPES)
+        return None
+
+    def _save_credentials(self, credentials) -> None:
+        creds_json = credentials.to_json()
+        keyring.set_password(CloudFileStorage.SERVICE_NAME, CloudFileStorage.TOKEN_KEY, creds_json)
+
     def _authenticate_google_drive(self):
         """
-        Authenticate and return a Google Drive service instance.
+        Authenticate and create the Google Drive service.
         """
-        const_token_file_path = "google_cloud_token.pickle"
-        const_creds_file_path = "google_cloud_credentials.json"
+        creds = self._load_credentials()
+        if creds and creds.valid:
+            return creds
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+            self._save_credentials(creds)
+            return creds
 
-        creds = None
+        const_file_path_for_client_secrets = os.path.join(".", "data", "google_cloud_credentials.json")
+        flow = InstalledAppFlow.from_client_secrets_file(const_file_path_for_client_secrets, CloudFileStorage.SCOPES)
+        creds = flow.run_local_server(open_browser=True)
+        self._save_credentials(creds)
 
-        # Load existing token if available
-        if os.path.exists(const_token_file_path):
-            try:
-                with open(const_token_file_path, "rb") as token:
-                    creds = pickle.load(token)
-            except Exception as e:
-                logger.warning("Failed to load token; re-authentication required.")
-                logger.warning(e)
+        self.drive_service = build("drive", "v3", credentials=creds)
+        self.flag_authenticated = True
 
-        # Refresh or re-authenticate if necessary
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                try:
-                    creds.refresh(Request())
-                except RefreshError as e:
-                    logger.warning("Token refresh failed; re-authenticating.")
-                    logger.warning(e)
-                    creds = None
-            if not creds:
-                try:
-                    flow = InstalledAppFlow.from_client_secrets_file(const_creds_file_path, self.SCOPES)
-                    creds = flow.run_local_server(port=0)
-                except FileNotFoundError:
-                    logger.error(f"Missing credentials file: {const_creds_file_path}")
-                    return
-                except Exception as e:
-                    logger.error(f"Authentication failed: {e}")
-                    return
-
-            # Save token for future sessions
-            try:
-                with open(const_token_file_path, "wb") as token:
-                    pickle.dump(creds, token)
-            except Exception as e:
-                logger.warning(f"Failed to save credentials token: {e}")
-
-        try:
-            self.drive_service = build("drive", "v3", credentials=creds)
-            self.flag_authenticated = True
-            logger.info("Google Drive authentication successful.")
-        except (UnknownApiNameOrVersion, MutualTLSChannelError, Exception) as e:
-            logger.error(f"Failed to build Google Drive service: {e}")
-            self.flag_authenticated = False
+        return creds
 
     def _search_file(self, file_name: str, folder_id=None):
         """
@@ -169,3 +153,9 @@ class CloudFileStorage:
         self.drive_service.files().delete(fileId=file_id).execute()
         logger.info(f"File '{file_name}' deleted successfully.")
         return True
+
+    def authenticate_google_drive(self):
+        """
+        Public method to authenticate Google Drive.
+        """
+        self._authenticate_google_drive()

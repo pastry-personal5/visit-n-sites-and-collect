@@ -9,5 +9,6 @@ users:
       foobar
 # 'cloud_file_storage' is optional.
 cloud_file_storage:
+  # true | false
   enabled: true
   folder_id_for_parent: abcdefg

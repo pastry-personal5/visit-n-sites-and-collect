@@ -24,4 +24,7 @@ style:
 unittest:
 	uv run --python 3.11 python -m unittest tests/*.py
 
-test: unittest
+regression_test:
+	uv run --python 3.11 python tests/regression_*.py
+
+test: unittest regression_test

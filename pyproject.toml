@@ -9,6 +9,7 @@ dependencies = [
     "google-api-core>=2.26.0",
     "google-api-python-client>=2.184.0",
     "google-auth-oauthlib>=1.2.2",
+    "keyring>=25.7.0",
     "loguru>=0.7.3",
     "requests>=2.32.5",
     "selenium>=4.36.0",
