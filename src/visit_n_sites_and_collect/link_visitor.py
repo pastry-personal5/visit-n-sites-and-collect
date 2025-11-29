@@ -40,7 +40,7 @@ def wait_for_page_load(driver):
     while True:
         try:
             title = driver.title
-            if title == "네이버페이":
+            if title == "네이버페이" or title == "네이버":
                 break
         except selenium.common.exceptions.NoSuchWindowException:
             logger.info("A user has closed the Chrome window.")
@@ -60,6 +60,8 @@ def visit_login_page(driver, nid, npw):
     """
 
     """
+
+    logger.info("Visiting login page...")
 
     const_time_to_wait_in_sec = 16
     const_html_element_id_for_id = "id"
