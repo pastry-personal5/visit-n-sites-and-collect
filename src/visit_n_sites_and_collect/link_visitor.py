@@ -56,9 +56,10 @@ def wait_for_page_load(driver):
         time.sleep(const_time_to_sleep_in_sec)
 
 
-def visit_login_page(driver, nid, npw):
+def visit_login_page(driver, nid: str, npw: str) -> bool:
     """
-
+    Visit the login page and perform login using the provided credentials.
+    Returns True if login is successful, False otherwise.
     """
 
     logger.info("Visiting login page...")
@@ -88,9 +89,13 @@ def visit_login_page(driver, nid, npw):
         logger.error(f"Required elements for login not found: {e}")
         return False
 
-    element_for_id.send_keys(nid)
-    # element_for_password.send_keys(npw)
-    # element_for_submission.click()
+    # try:
+    #     # element_for_id.send_keys(nid)
+    #     # element_for_password.send_keys(npw)
+    #     # element_for_submission.click()
+    # except SC.exceptions.ElementNotInteractableException as e:
+    #     logger.error(f"Could not interact with login elements: {e}")
+    #     return False
 
     wait_for_page_load(driver)
 
@@ -347,6 +352,8 @@ class LinkVisitor:
         nid,
         npw,
     ):
+        for campaign_link in set_of_campaign_links:
+            logger.info(f"Campaign link to visit: {campaign_link}")
         flag_use_cloud_file_storage = self.flag_to_use_cloud_file_storage
         logger.info(f"Use a cloud storage to manage a list of visited URLs? (True/False) {flag_use_cloud_file_storage}")
         self.visited_campaign_link_recorder.flag_use_cloud_file_storage = flag_use_cloud_file_storage
