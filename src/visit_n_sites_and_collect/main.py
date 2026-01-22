@@ -53,6 +53,7 @@ class MainController:
         link_finder_creator = LinkFinderFactory()
         c1_link_finder = link_finder_creator.build_link_finder(LinkFinderFactory.const_c1, self.article_link_to_campaign_link_cache)
         d1_link_finder = link_finder_creator.build_link_finder(LinkFinderFactory.const_d1, self.article_link_to_campaign_link_cache)
+
         self.link_finders.append(c1_link_finder)
         self.link_finders.append(d1_link_finder)
 
@@ -74,6 +75,8 @@ class MainController:
 
     def _init_with_global_config(self, global_config_ir: GlobalConfigIR):
         self.link_visitor.init_with_global_config(global_config_ir)
+        for link_finder in self.link_finders:
+            link_finder.initialize_with_config(global_config_ir.config["campaign_link_prefixes"])
 
     def _find_all(self, nid) -> set[str]:
         days_difference_since_last_run = self._get_days_difference_since_last_run(nid)

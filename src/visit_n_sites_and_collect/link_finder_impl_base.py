@@ -11,6 +11,11 @@ class LinkFinderImplBase:
         self.article_link_to_campaign_link_cache = article_link_to_campaign_link_cache  # It's a shared object. Let's reference it.
         self.link_finder_filter = LinkFinderFilter()
 
+    def initialize_with_config(
+        self, list_of_campaign_link_prefix: list[str]
+    ) -> None:
+        self.link_finder_filter.initialize_with_config(list_of_campaign_link_prefix)
+
     def cleanup(self) -> None:
         pass
 

@@ -133,19 +133,19 @@ class LinkFinderForD1WebSiteImpl(LinkFinderImplBase):
         :return: a list of campaign links found in the article referenced by the input `article_link`.
         """
 
-        logger.info(f"The reference link of an article is ({article_link})")
+        logger.info(f"The reference link of an article is: {article_link}")
 
         # It looks up an entry in the cache, first.
         list_of_campaign_links = self.article_link_to_campaign_link_cache.get(article_link)
         if list_of_campaign_links:
             # Cache hit.
-            logger.info(f"Cache hit. Now returning entries from the cache. ({article_link})")
+            logger.info(f"Cache hit. Now returning entries from the cache: {article_link}")
             return list_of_campaign_links
 
         # Cache miss.
         list_of_campaign_links = []
 
-        logger.info(f"Visiting ({article_link})...")
+        logger.info(f"Visiting: {article_link} ...")
         try:
             if not self.web_browser_client.visit(article_link):
                 logger.error(f"Failed to visit {article_link}")
@@ -195,7 +195,7 @@ class LinkFinderForD1WebSiteImpl(LinkFinderImplBase):
         contains the word '네이버' (which means 'Naver' in Korean).
         """
         # Send a request to the |publisher_link|
-        logger.info(f"Visiting ({publisher_link})...")
+        logger.info(f"Visiting: {publisher_link} ...")
 
         try:
             if not self.web_browser_client.visit(publisher_link):
@@ -226,6 +226,6 @@ class LinkFinderForD1WebSiteImpl(LinkFinderImplBase):
                         if article_link.startswith("/promotion"):
                             article_link = "https://damoang.net" + article_link
                         list_of_article_links.append(article_link)
-                        logger.info(f"article_link: ({article_link})")
+                        logger.info(f"article_link: {article_link}")
 
         return list_of_article_links
