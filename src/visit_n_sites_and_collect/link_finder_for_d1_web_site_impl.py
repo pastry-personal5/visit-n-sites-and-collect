@@ -137,7 +137,7 @@ class LinkFinderForD1WebSiteImpl(LinkFinderImplBase):
 
         # It looks up an entry in the cache, first.
         list_of_campaign_links = self.article_link_to_campaign_link_cache.get(article_link)
-        if list_of_campaign_links:
+        if list_of_campaign_links is not None:
             # Cache hit.
             logger.info(f"Cache hit. Now returning entries from the cache: {article_link}")
             return list_of_campaign_links
