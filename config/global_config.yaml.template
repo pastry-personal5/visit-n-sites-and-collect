@@ -12,3 +12,6 @@ cloud_file_storage:
   # true | false
   enabled: true
   folder_id_for_parent: abcdefg
+campaign_link_prefixes:
+  - "https://foo.com/"
+  - "https://bar.com/"
