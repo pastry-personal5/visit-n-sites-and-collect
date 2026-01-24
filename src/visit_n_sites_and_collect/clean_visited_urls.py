@@ -20,6 +20,7 @@ class CleaningController:
     """
     A controller to clean the visited URLs file.
     It uses the CloudFileStorage and VisitedCampaignLinkController classes to manage the visited URLs.
+    It provides functionality to delete all visited URLs for a given user.
     """
 
     def __init__(self):
