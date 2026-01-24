@@ -32,7 +32,7 @@ class CleaningController:
         global_config = global_config_ir.config
         if "cloud_file_storage" in global_config:
             global_config_for_cloud_file_storage = global_config["cloud_file_storage"]
-            if "enabled" in global_config_for_cloud_file_storage:
+            if "enabled" in global_config_for_cloud_file_storage and global_config_for_cloud_file_storage["enabled"] is True:
                 if "folder_id_for_parent" in global_config_for_cloud_file_storage:
                     self.configuration_for_cloud_file_storage = ConfigurationForCloudFileStorage()
                     self.configuration_for_cloud_file_storage.init_with_core_config(global_config_for_cloud_file_storage["folder_id_for_parent"])
