@@ -4,25 +4,33 @@ This module automates visiting N-site's campaign links.
 
 ## Requirements
 
-It is verified that it works with Python 3.11.
+* Python 3.11: This version is verified and required for compatibility.
+
+* Driver Support: As of January 26, 2026, Python 3.11 is necessary to run `undetected-chromedriver` successfully.
 
 ## Quick Start Guide
 
-* Install python and pip.
+* Install python and uv.
 
-  Ensure Python 3.11 (or later) and pip are installed on your system.
+  Ensure that both Python 3.11 and the uv package manager are installed on your system.
 
-* Edit the configuration file: `global_config.yaml`.
+* Edit the configuration file: `config/global_config.yaml`.
+  Look for `config/global_config.yaml.template`.
 
-* Optionally, create a Google Cloud application for Google Drive access.
+* Setup Google Cloud (Optional)
 
-  Prepare `google_cloud_credentials.json` file.
+  If you need Google Drive integration:
 
-  Look for the `cloud_file_storage.py` for details.
+  * Create a Google Cloud application.
+
+  * Prepare your `google_cloud_credentials.json` file.
+
+  * Refer to `cloud_file_storage.py` for specific implementation details.
 
 * Run the module.
 
   Execute the script.
+
   ```bash
   ./1
   ```
@@ -30,6 +38,7 @@ It is verified that it works with Python 3.11.
 ## Test
 
 * Run the following command to test.
+
   ```bash
   make test
   ```
