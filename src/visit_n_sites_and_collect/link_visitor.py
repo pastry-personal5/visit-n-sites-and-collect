@@ -119,6 +119,7 @@ class VisitedCampaignLinkController(VisitedCampaignLinkControllerBase):
             if self.configuration_for_cloud_file_storage and self.configuration_for_cloud_file_storage.has_valid_cloud_file_storage_config():
                 self.cloud_file_storage.download(
                     basename_of_gzipped_file,
+                    gzipped_file_path,
                     self.configuration_for_cloud_file_storage.folder_id_of_parent_of_cloud_file_storage,
                 )
             else:
