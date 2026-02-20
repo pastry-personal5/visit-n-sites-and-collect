@@ -1,7 +1,6 @@
 import json
 import keyring
 import os
-from pathlib import Path
 
 
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -31,7 +30,10 @@ class CloudFileStorage:
         self.flag_authenticated = False
         self.drive_service = None
 
-    def _load_credentials(self):
+    def _load_credentials(self) -> Credentials | None:
+        """
+        Load stored credentials from the keyring.
+        """
         token_json = keyring.get_password(CloudFileStorage.SERVICE_NAME, CloudFileStorage.TOKEN_KEY)
         if token_json:
             creds_data = json.loads(token_json)
@@ -42,16 +44,20 @@ class CloudFileStorage:
         creds_json = credentials.to_json()
         keyring.set_password(CloudFileStorage.SERVICE_NAME, CloudFileStorage.TOKEN_KEY, creds_json)
 
-    def _authenticate_google_drive(self):
+    def _authenticate_google_drive(self) -> Credentials | None:
         """
         Authenticate and create the Google Drive service.
         """
         creds = self._load_credentials()
         if creds and creds.valid:
+            self.drive_service = build("drive", "v3", credentials=creds)
+            self.flag_authenticated = True
             return creds
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
             self._save_credentials(creds)
+            self.drive_service = build("drive", "v3", credentials=creds)
+            self.flag_authenticated = True
             return creds
 
         const_file_path_for_client_secrets = os.path.join(".", "data", "google_cloud_credentials.json")
@@ -64,10 +70,11 @@ class CloudFileStorage:
 
         return creds
 
-    def _search_file(self, file_name: str, folder_id=None):
+    def _search_file(self, file_name: str, folder_id=None) -> dict | None:
         """
         Search for a file by name in a specific folder (if provided).
         """
+        logger.info(f"Searching for file '{file_name}' in folder '{folder_id}'...")
         query = f"name = '{file_name}' and trashed = false"
         if folder_id:
             query += f" and '{folder_id}' in parents"
@@ -77,10 +84,11 @@ class CloudFileStorage:
         files = results.get("files", [])
         return files[0] if files else None
 
-    def _upload_or_update_file(self, file_name: str, file_path: str, folder_id=None):
+    def _upload_or_update_file(self, file_name: str, file_path: str, folder_id=None) -> dict:
         """
         Upload a new file or update an existing file in Google Drive.
         """
+        logger.info(f"Uploading/updating file '{file_name}' with file_path '{file_path}' to folder '{folder_id}'...")
         file_metadata = {"name": file_name}
         if folder_id:
             file_metadata["parents"] = [folder_id]
@@ -102,12 +110,11 @@ class CloudFileStorage:
         logger.info(f"File '{file_name}' uploaded successfully.")
         return new_file
 
-    def _download_file(self, file_id: str, file_name: str) -> None:
+    def _download_file(self, file_id: str, file_path: str) -> None:
         """
         Download a file from Google Drive.
         """
         request = self.drive_service.files().get_media(fileId=file_id)
-        file_path = os.path.join(os.getcwd(), file_name)
 
         with open(file_path, "wb") as file:
             downloader = MediaIoBaseDownload(file, request)
@@ -118,16 +125,17 @@ class CloudFileStorage:
 
         logger.info(f"File downloaded to: {file_path}")
 
-    def upload(self, file_name: str, folder_id_for_parent_of_cloud_file_storage: str) -> None:
+    def upload(self, file_name: str, file_path: str, folder_id_for_parent_of_cloud_file_storage: str) -> bool:
         if not self.flag_authenticated:
             self._authenticate_google_drive()
         if not self.flag_authenticated:
             return False
         assert self.drive_service is not None
 
-        self._upload_or_update_file(file_name, file_name, folder_id=folder_id_for_parent_of_cloud_file_storage)
+        self._upload_or_update_file(file_name, file_path, folder_id=folder_id_for_parent_of_cloud_file_storage)
+        return True
 
-    def download(self, file_name: str, folder_id_for_parent_of_cloud_file_storage: str) -> bool:
+    def download(self, file_name: str, file_path: str, folder_id_for_parent_of_cloud_file_storage: str) -> bool:
         if not self.flag_authenticated:
             self._authenticate_google_drive()
         if not self.flag_authenticated:
@@ -137,7 +145,7 @@ class CloudFileStorage:
         if not existing_file:
             return False
         file_id = existing_file["id"]
-        self._download_file(file_id, file_name)
+        self._download_file(file_id, file_path)
         return True
 
     def delete(self, file_name: str, folder_id_for_parent_of_cloud_file_storage: str) -> bool:
@@ -154,7 +162,7 @@ class CloudFileStorage:
         logger.info(f"File '{file_name}' deleted successfully.")
         return True
 
-    def authenticate_google_drive(self):
+    def authenticate_google_drive(self) -> None:
         """
         Public method to authenticate Google Drive.
         """

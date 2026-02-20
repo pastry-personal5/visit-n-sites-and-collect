@@ -8,10 +8,8 @@ Please look for `LICENSE` file for license.
 Please beware of file encoding.
 """
 
+from abc import ABC, abstractmethod
 import datetime
-import sys
-
-from loguru import logger
 
 from src.visit_n_sites_and_collect.article_link_to_campaign_link_cache import ArticleLinkToCampaignLinkCache
 from src.visit_n_sites_and_collect.last_run_recorder import LastRunRecorder
@@ -19,27 +17,37 @@ from src.visit_n_sites_and_collect.link_finder_for_c1_web_site_impl import LinkF
 from src.visit_n_sites_and_collect.link_finder_for_d1_web_site_impl import LinkFinderForD1WebSiteImpl
 from src.visit_n_sites_and_collect.link_visitor import LinkVisitor
 from src.visit_n_sites_and_collect.global_config import GlobalConfigController, GlobalConfigIR
+from src.visit_n_sites_and_collect.link_finder_impl_base import LinkFinderImplBase
 
 
-class LinkFinderFactory:
+# Classes that come with a factory method pattern.
 
-    const_c1 = 0
-    const_d1 = 1
+class LinkFinderFactory(ABC):
 
-    def __init__(self):
+    @abstractmethod
+    def build_link_finder(
+        self,
+        article_link_to_campaign_link_cache: ArticleLinkToCampaignLinkCache,
+    ) -> LinkFinderImplBase:
         pass
+
+
+class LinkFinderForC1WebSiteFactory(LinkFinderFactory):
 
     def build_link_finder(
         self,
-        visitor_type: int,
         article_link_to_campaign_link_cache: ArticleLinkToCampaignLinkCache,
-    ):
-        if visitor_type == self.const_c1:
-            return LinkFinderForC1WebSiteImpl(article_link_to_campaign_link_cache)
-        if visitor_type == self.const_d1:
-            return LinkFinderForD1WebSiteImpl(article_link_to_campaign_link_cache)
-        else:
-            return None
+    ) -> LinkFinderImplBase:
+        return LinkFinderForC1WebSiteImpl(article_link_to_campaign_link_cache)
+
+
+class LinkFinderForD1WebSiteFactory(LinkFinderFactory):
+
+    def build_link_finder(
+        self,
+        article_link_to_campaign_link_cache: ArticleLinkToCampaignLinkCache,
+    ) -> LinkFinderImplBase:
+        return LinkFinderForD1WebSiteImpl(article_link_to_campaign_link_cache)
 
 
 class MainController:
@@ -49,14 +57,6 @@ class MainController:
         self.link_visitor = LinkVisitor()
         self.link_finders = []
 
-        # Now one has just two link finder objects. Therefore, `self.link_finders`` is going to get two elements.
-        link_finder_creator = LinkFinderFactory()
-        c1_link_finder = link_finder_creator.build_link_finder(LinkFinderFactory.const_c1, self.article_link_to_campaign_link_cache)
-        d1_link_finder = link_finder_creator.build_link_finder(LinkFinderFactory.const_d1, self.article_link_to_campaign_link_cache)
-
-        self.link_finders.append(c1_link_finder)
-        self.link_finders.append(d1_link_finder)
-
     def cleanup(self):
         for link_finder in self.link_finders:
             link_finder.cleanup()
@@ -64,7 +64,7 @@ class MainController:
     def find_and_visit_all_with_global_config(self, global_config_ir: GlobalConfigIR):
         self._init_with_global_config(global_config_ir)
         # This method is a main entry point.
-        users = global_config_ir.config["users"]
+        users = global_config_ir.raw_config["users"]
         for user in users:
             nid = user["id"]
             npw = user["pw"]
@@ -75,8 +75,22 @@ class MainController:
 
     def _init_with_global_config(self, global_config_ir: GlobalConfigIR):
         self.link_visitor.init_with_global_config(global_config_ir)
+
+        # Initialize link finders.
+        link_finder_factories = []
+        collectors = global_config_ir.collectors
+        for c in collectors:
+            if c in collectors and collectors[c]["enabled"] is True:
+                if c == "c1":
+                    link_finder_factories.append(LinkFinderForC1WebSiteFactory())
+                elif c == "d1":
+                    link_finder_factories.append(LinkFinderForD1WebSiteFactory())
+        for link_finder_creator in link_finder_factories:
+            link_finder = link_finder_creator.build_link_finder(
+                self.article_link_to_campaign_link_cache)
+            self.link_finders.append(link_finder)
         for link_finder in self.link_finders:
-            link_finder.initialize_with_config(global_config_ir.config["campaign_link_prefixes"])
+            link_finder.initialize_with_config(global_config_ir.raw_config["campaign_link_prefixes"])
 
     def _find_all(self, nid) -> set[str]:
         days_difference_since_last_run = self._get_days_difference_since_last_run(nid)

@@ -29,7 +29,7 @@ class CleaningController:
         self.configuration_for_cloud_file_storage = None
 
     def delete_all(self, global_config_ir: GlobalConfigIR) -> None:
-        global_config = global_config_ir.config
+        global_config = global_config_ir.raw_config
         if "cloud_file_storage" in global_config:
             global_config_for_cloud_file_storage = global_config["cloud_file_storage"]
             if "enabled" in global_config_for_cloud_file_storage and global_config_for_cloud_file_storage["enabled"] is True:

@@ -13,7 +13,33 @@ except ImportError:
 class GlobalConfigIR:
 
     def __init__(self):
-        self.config = {}
+        self.raw_config = {}
+        self.collectors = {}
+        self.users = {}
+
+    def build_ir(self, global_config_dict: dict):
+        self.raw_config = global_config_dict
+
+        self._build_collector_config_ir()
+        self._build_collector_config_ir()
+
+    def _build_collector_config_ir(self):
+        self.collectors = {}
+        for c in self.raw_config["collectors"]:
+            collector_name = c["name"]
+            flag_enabled = bool(c["enabled"])
+            self.collectors[collector_name] = {
+                "enabled": flag_enabled
+            }
+
+    def _build_user_config_ir(self):
+        self.users = {}
+        for u in self.raw_config["users"]:
+            user_id = u["id"]
+            user_pw = u["pw"]
+            self.users[user_id] = {
+                "pw": user_pw
+            }
 
 
 class GlobalConfigController:
@@ -36,9 +62,9 @@ class GlobalConfigController:
         try:
             with open("./config/global_config.yaml", "r", encoding="utf-8") as config_file_stream:
                 global_config_dict = yaml.safe_load(config_file_stream)
-                global_config = GlobalConfigIR()
-                global_config.config = global_config_dict
-                return global_config
+                global_config_ir = GlobalConfigIR()
+                global_config_ir.build_ir(global_config_dict)
+                return global_config_ir
         except FileNotFoundError:
             logger.error("The global_config.yaml file was not found. Please ensure the file exists in the project root directory.")
             sys.exit(-1)
