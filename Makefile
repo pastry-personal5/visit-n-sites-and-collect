@@ -1,6 +1,6 @@
 PYCODESTYLE_MAX_LINE_LENGTH=512
 SOURCE_CODE_PATH=./src/visit_n_sites_and_collect
-.PHONY: all checkmake clean lint shellcheck style test unittest
+.PHONY: all checkmake clean lint shellcheck style test unittest regression_test regression_test_cloud
 
 all: checkmake shellcheck style lint test
 
@@ -25,6 +25,9 @@ unittest:
 	uv run --python 3.11 python -m unittest tests/*.py
 
 regression_test:
-	uv run --python 3.11 python tests/regression_*.py
+	uv run --python 3.11 pytest tests/regression*.py tests/regression
+
+regression_test_cloud:
+	RUN_CLOUD_STORAGE_TESTS=1 uv run --python 3.11 pytest tests/regression_test_cloud_file_storage.py tests/regression
 
 test: unittest regression_test
