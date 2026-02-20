@@ -1,13 +1,27 @@
 users:
-  - id: foo
-    pw: bar
-  - id: baz
-    pw: foobar
-# 'cloud_file_storage' is optional.
+  - id: user1
+    pw: pass1
+  - id: user2
+    pw: pass2
+  - id: user3
+    pw: pass3
+collectors:
+  - name: c1
+    # true | false
+    enabled: true
+  - name: d1
+    enabled: true
 cloud_file_storage:
   # true | false
   enabled: true
-  folder_id_for_parent: abcdefg
+  # Google Drive Folder ID
+  # 2. Area > 개인금융관리 > 앱테크
+  folder_id_for_parent: YOUR_FOLDER_ID
 campaign_link_prefixes:
-  - "https://foo.com/"
-  - "https://bar.com/"
+  - "https://campaign2-api.naver.com/"
+  - "http://ofw.adison.co/"
+  - "https://ofw.adison.co/"
+  - "https://campaign2.naver.com/"
+  - "https://naver.me/"
+  - "https://s.ppomppu.co.kr/"
+  - "https://s.ppomppu1.co.kr/"
