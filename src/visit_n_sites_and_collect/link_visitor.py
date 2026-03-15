@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from contextlib import suppress
 import os
 import sys
 import time
@@ -174,14 +175,10 @@ class VisitedCampaignLinkController(VisitedCampaignLinkControllerBase):
         file_path = self._get_full_visited_urls_file_path()
         gzipped_file_path = self._get_gzipped_full_visited_urls_file_path()
         logger.info(f"Deleting if exist: ({file_path}) and ({gzipped_file_path})...")
-        try:
+        with suppress(FileNotFoundError):
             os.remove(file_path)
-        except FileNotFoundError:
-            pass
-        try:
+        with suppress(FileNotFoundError):
             os.remove(gzipped_file_path)
-        except FileNotFoundError:
-            pass
         basename_of_gzipped_file = os.path.basename(gzipped_file_path)
         if self.flag_use_cloud_file_storage:
             if self.configuration_for_cloud_file_storage and self.configuration_for_cloud_file_storage.has_valid_cloud_file_storage_config():
@@ -220,13 +217,19 @@ class LinkVisitor:
         self.flag_to_use_cloud_file_storage = False
         if "cloud_file_storage" in global_config:
             global_config_for_cloud_file_storage = global_config["cloud_file_storage"]
-            if "enabled" in global_config_for_cloud_file_storage:
-                value = global_config_for_cloud_file_storage["enabled"]
-                if value:
-                    self.flag_to_use_cloud_file_storage = True
             if "folder_id_for_parent" in global_config_for_cloud_file_storage:
                 self.configuration_for_cloud_file_storage = ConfigurationForCloudFileStorage()
                 self.configuration_for_cloud_file_storage.init_with_core_config(global_config_for_cloud_file_storage["folder_id_for_parent"])
+            if global_config_for_cloud_file_storage.get("enabled") is True:
+                if (
+                    self.configuration_for_cloud_file_storage
+                    and self.configuration_for_cloud_file_storage.has_valid_cloud_file_storage_config()
+                ):
+                    self.flag_to_use_cloud_file_storage = True
+                else:
+                    logger.warning(
+                        "cloud_file_storage.enabled is True but folder_id_for_parent is missing; cloud storage will be disabled."
+                    )
         self.visited_campaign_link_recorder.init_with_cloud_file_storage(self.configuration_for_cloud_file_storage, self.cloud_file_storage)
         self.visited_campaign_link_recorder.set_use_cloud_file_storage(self.flag_to_use_cloud_file_storage)
 

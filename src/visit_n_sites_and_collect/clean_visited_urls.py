@@ -33,11 +33,19 @@ class CleaningController:
         flag_to_use_cloud_file_storage = False
         if "cloud_file_storage" in global_config:
             global_config_for_cloud_file_storage = global_config["cloud_file_storage"]
-            if "enabled" in global_config_for_cloud_file_storage and global_config_for_cloud_file_storage["enabled"] is True:
-                flag_to_use_cloud_file_storage = True
             if "folder_id_for_parent" in global_config_for_cloud_file_storage:
                 self.configuration_for_cloud_file_storage = ConfigurationForCloudFileStorage()
                 self.configuration_for_cloud_file_storage.init_with_core_config(global_config_for_cloud_file_storage["folder_id_for_parent"])
+            if global_config_for_cloud_file_storage.get("enabled") is True:
+                if (
+                    self.configuration_for_cloud_file_storage
+                    and self.configuration_for_cloud_file_storage.has_valid_cloud_file_storage_config()
+                ):
+                    flag_to_use_cloud_file_storage = True
+                else:
+                    logger.warning(
+                        "cloud_file_storage.enabled is True but folder_id_for_parent is missing; cloud storage cleanup will be disabled."
+                    )
         self.visited_campaign_link_controller.init_with_cloud_file_storage(self.configuration_for_cloud_file_storage, self.cloud_file_storage)
         self.visited_campaign_link_controller.set_use_cloud_file_storage(flag_to_use_cloud_file_storage)
 

@@ -45,6 +45,9 @@ class _StubConfigurationForCloudFileStorage:
     def init_with_core_config(self, folder_id: str) -> None:
         self.folder_id = folder_id
 
+    def has_valid_cloud_file_storage_config(self) -> bool:
+        return bool(self.folder_id)
+
 
 def _import_clean_visited_urls_module():
     if "loguru" not in sys.modules:
@@ -117,7 +120,7 @@ class TestCleaningControllerCloudFlagPropagation(unittest.TestCase):
         controller.delete_all(global_config_ir)
 
         visited = controller.visited_campaign_link_controller
-        self.assertEqual(visited.use_cloud_storage_values, [True])
+        self.assertEqual(visited.use_cloud_storage_values, [False])
         (config_obj, cloud_obj) = visited.init_with_cloud_file_storage_calls[0]
         self.assertIsNone(config_obj)
         self.assertIsInstance(cloud_obj, _StubCloudFileStorage)
@@ -145,4 +148,3 @@ class TestCleaningControllerCloudFlagPropagation(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

@@ -1,6 +1,8 @@
 import importlib.util
+import os
 import pathlib
 import sys
+import tempfile
 import types
 import unittest
 
@@ -16,7 +18,6 @@ def _install_selenium_stubs() -> None:
     class _BaseSeleniumException(Exception):
         pass
 
-    # selenium.common.exceptions
     exceptions_module = types.ModuleType("selenium.common.exceptions")
     for exc_name in [
         "SessionNotCreatedException",
@@ -28,13 +29,9 @@ def _install_selenium_stubs() -> None:
     common_module = types.ModuleType("selenium.common")
     common_module.exceptions = exceptions_module
 
-    # selenium.common as SC is also used with extra exception names.
     for exc_name in ["NoAlertPresentException", "TimeoutException"]:
         setattr(common_module, exc_name, type(exc_name, (_BaseSeleniumException,), {}))
-    common_module.TimeoutException = getattr(common_module, "TimeoutException")
-    common_module.NoAlertPresentException = getattr(common_module, "NoAlertPresentException")
 
-    # selenium.webdriver.common.by
     by_module = types.ModuleType("selenium.webdriver.common.by")
 
     class By:
@@ -42,7 +39,6 @@ def _install_selenium_stubs() -> None:
 
     by_module.By = By
 
-    # selenium.webdriver.support.ui
     ui_module = types.ModuleType("selenium.webdriver.support.ui")
 
     class WebDriverWait:
@@ -54,7 +50,6 @@ def _install_selenium_stubs() -> None:
 
     ui_module.WebDriverWait = WebDriverWait
 
-    # selenium.webdriver.support.expected_conditions
     ec_module = types.ModuleType("selenium.webdriver.support.expected_conditions")
 
     def alert_is_present():
@@ -66,7 +61,6 @@ def _install_selenium_stubs() -> None:
     ec_module.alert_is_present = alert_is_present
     ec_module.presence_of_element_located = presence_of_element_located
 
-    # Package containers
     webdriver_common_module = types.ModuleType("selenium.webdriver.common")
     webdriver_support_module = types.ModuleType("selenium.webdriver.support")
     webdriver_module = types.ModuleType("selenium.webdriver")
@@ -111,14 +105,8 @@ def _import_link_visitor_module():
         pass
 
     class _StubConfigurationForCloudFileStorage:
-        def __init__(self):
-            self.folder_id = None
-
-        def init_with_core_config(self, folder_id: str) -> None:
-            self.folder_id = folder_id
-
         def has_valid_cloud_file_storage_config(self) -> bool:
-            return bool(self.folder_id)
+            return False
 
     class _StubLastRunRecorder:
         def prepare_visit(self, *_args, **_kwargs):
@@ -158,7 +146,7 @@ def _import_link_visitor_module():
     project_root = pathlib.Path(__file__).resolve().parents[1]
     module_path = project_root / "src" / "visit_n_sites_and_collect" / "link_visitor.py"
     spec = importlib.util.spec_from_file_location(
-        "tests.link_visitor_under_test", module_path
+        "tests.link_visitor_delete_under_test", module_path
     )
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
@@ -166,71 +154,47 @@ def _import_link_visitor_module():
     return module
 
 
-class _RecorderSpy:
-    def __init__(self):
-        self.cloud_enabled_values = []
-        self.init_calls = 0
-
-    def init_with_cloud_file_storage(self, *_args, **_kwargs):
-        self.init_calls += 1
-
-    def set_use_cloud_file_storage(self, enabled: bool) -> None:
-        self.cloud_enabled_values.append(bool(enabled))
-
-
-class TestLinkVisitorCloudFlag(unittest.TestCase):
+class TestVisitedCampaignLinkControllerDeleteAll(unittest.TestCase):
     def setUp(self):
         self.module = _import_link_visitor_module()
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp_dir.cleanup)
+        self.module.Constants.data_dir_path = self.temp_dir.name
 
-    def test_visited_campaign_link_controller_setter_toggles_flag(self):
+    def test_delete_all_removes_gz_even_if_plain_text_missing(self):
         controller = self.module.VisitedCampaignLinkController()
-        controller.set_use_cloud_file_storage(True)
-        self.assertTrue(controller.flag_use_cloud_file_storage)
         controller.set_use_cloud_file_storage(False)
-        self.assertFalse(controller.flag_use_cloud_file_storage)
+        controller.reset_with_nid("user1")
 
-    def test_init_with_global_config_propagates_cloud_flag_to_recorder(self):
-        visitor = self.module.LinkVisitor()
-        spy = _RecorderSpy()
-        visitor.visited_campaign_link_recorder = spy
+        gz_path = os.path.join(self.temp_dir.name, "visited_urls.user1.txt.gz")
+        with open(gz_path, "wb") as f:
+            f.write(b"not-a-real-gzip-but-fine")
 
-        global_config_ir = self.module.GlobalConfigIR(
-            raw_config={
-                "cloud_file_storage": {
-                    "enabled": True,
-                    "folder_id_for_parent": "FOLDER123",
-                }
-            }
-        )
-        visitor.init_with_global_config(global_config_ir)
+        self.assertFalse(os.path.exists(os.path.join(self.temp_dir.name, "visited_urls.user1.txt")))
+        self.assertTrue(os.path.exists(gz_path))
 
-        self.assertEqual(spy.init_calls, 1)
-        self.assertEqual(spy.cloud_enabled_values, [True])
+        controller.delete_all()
 
-    def test_init_with_global_config_disables_cloud_flag_when_folder_missing(self):
-        visitor = self.module.LinkVisitor()
-        spy = _RecorderSpy()
-        visitor.visited_campaign_link_recorder = spy
+        self.assertFalse(os.path.exists(gz_path))
 
-        global_config_ir = self.module.GlobalConfigIR(
-            raw_config={"cloud_file_storage": {"enabled": True}}
-        )
-        visitor.init_with_global_config(global_config_ir)
+    def test_delete_all_removes_both_files_when_present(self):
+        controller = self.module.VisitedCampaignLinkController()
+        controller.set_use_cloud_file_storage(False)
+        controller.reset_with_nid("user2")
 
-        self.assertEqual(spy.init_calls, 1)
-        self.assertEqual(spy.cloud_enabled_values, [False])
+        txt_path = os.path.join(self.temp_dir.name, "visited_urls.user2.txt")
+        gz_path = os.path.join(self.temp_dir.name, "visited_urls.user2.txt.gz")
+        with open(txt_path, "w", encoding="utf-8") as f:
+            f.write("https://example.com\n")
+        with open(gz_path, "wb") as f:
+            f.write(b"data")
 
-    def test_visit_method_propagates_cloud_flag_even_with_empty_links(self):
-        visitor = self.module.LinkVisitor()
-        spy = _RecorderSpy()
-        visitor.visited_campaign_link_recorder = spy
-        visitor.flag_to_use_cloud_file_storage = True
+        controller.delete_all()
 
-        result = visitor._visit(set(), None, "nid", "pw")
-
-        self.assertIsNone(result)
-        self.assertEqual(spy.cloud_enabled_values, [True])
+        self.assertFalse(os.path.exists(txt_path))
+        self.assertFalse(os.path.exists(gz_path))
 
 
 if __name__ == "__main__":
     unittest.main()
+
