@@ -59,9 +59,16 @@ class VisitedCampaignLinkController(VisitedCampaignLinkControllerBase):
         self.cloud_file_storage = None
         self.flag_use_cloud_file_storage = False
 
-    def init_with_cloud_file_storage(self, configuration_for_cloud_file_storage: ConfigurationForCloudFileStorage, cloud_file_storage: CloudFileStorage) -> None:
+    def init_with_cloud_file_storage(
+        self,
+        configuration_for_cloud_file_storage: ConfigurationForCloudFileStorage | None,
+        cloud_file_storage: CloudFileStorage,
+    ) -> None:
         self.configuration_for_cloud_file_storage = configuration_for_cloud_file_storage
         self.cloud_file_storage = cloud_file_storage
+
+    def set_use_cloud_file_storage(self, enabled: bool) -> None:
+        self.flag_use_cloud_file_storage = bool(enabled)
 
     def reset_with_nid(self, nid: str) -> None:
         logger.info(f"Resetting with a new n-site ID: ({nid})")
@@ -221,6 +228,7 @@ class LinkVisitor:
                 self.configuration_for_cloud_file_storage = ConfigurationForCloudFileStorage()
                 self.configuration_for_cloud_file_storage.init_with_core_config(global_config_for_cloud_file_storage["folder_id_for_parent"])
         self.visited_campaign_link_recorder.init_with_cloud_file_storage(self.configuration_for_cloud_file_storage, self.cloud_file_storage)
+        self.visited_campaign_link_recorder.set_use_cloud_file_storage(self.flag_to_use_cloud_file_storage)
 
     def visit_all(self, nid, npw, set_of_campaign_links: set[str]) -> None:
         # It creates a Naver session and visit campaign links.
@@ -257,7 +265,7 @@ class LinkVisitor:
             logger.info(f"Campaign link to visit: {campaign_link}")
         flag_use_cloud_file_storage = self.flag_to_use_cloud_file_storage
         logger.info(f"Use a cloud storage to manage a list of visited URLs? (True/False) {flag_use_cloud_file_storage}")
-        self.visited_campaign_link_recorder.flag_use_cloud_file_storage = flag_use_cloud_file_storage
+        self.visited_campaign_link_recorder.set_use_cloud_file_storage(flag_use_cloud_file_storage)
 
         for campaign_link in set_of_campaign_links:
             if self.visited_campaign_link_recorder.is_visited_campaign_link(campaign_link):

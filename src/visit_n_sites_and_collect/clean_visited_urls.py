@@ -30,14 +30,16 @@ class CleaningController:
 
     def delete_all(self, global_config_ir: GlobalConfigIR) -> None:
         global_config = global_config_ir.raw_config
+        flag_to_use_cloud_file_storage = False
         if "cloud_file_storage" in global_config:
             global_config_for_cloud_file_storage = global_config["cloud_file_storage"]
             if "enabled" in global_config_for_cloud_file_storage and global_config_for_cloud_file_storage["enabled"] is True:
-                if "folder_id_for_parent" in global_config_for_cloud_file_storage:
-                    self.configuration_for_cloud_file_storage = ConfigurationForCloudFileStorage()
-                    self.configuration_for_cloud_file_storage.init_with_core_config(global_config_for_cloud_file_storage["folder_id_for_parent"])
-                    self.visited_campaign_link_controller.flag_use_cloud_file_storage = True
+                flag_to_use_cloud_file_storage = True
+            if "folder_id_for_parent" in global_config_for_cloud_file_storage:
+                self.configuration_for_cloud_file_storage = ConfigurationForCloudFileStorage()
+                self.configuration_for_cloud_file_storage.init_with_core_config(global_config_for_cloud_file_storage["folder_id_for_parent"])
         self.visited_campaign_link_controller.init_with_cloud_file_storage(self.configuration_for_cloud_file_storage, self.cloud_file_storage)
+        self.visited_campaign_link_controller.set_use_cloud_file_storage(flag_to_use_cloud_file_storage)
 
         users = global_config["users"]
         for user in users:
