@@ -3,6 +3,14 @@ import uuid
 
 import pytest
 
+import pathlib
+import sys
+
+PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[1]
+SRC_ROOT = PROJECT_ROOT / "src"
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
+
 from visit_n_sites_and_collect.cloud_file_storage import CloudFileStorage
 from visit_n_sites_and_collect.global_config import GlobalConfigController
 

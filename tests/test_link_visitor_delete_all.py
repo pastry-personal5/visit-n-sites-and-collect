@@ -20,9 +20,12 @@ def _install_selenium_stubs() -> None:
 
     exceptions_module = types.ModuleType("selenium.common.exceptions")
     for exc_name in [
+        "NoSuchElementException",
         "SessionNotCreatedException",
         "NoSuchWindowException",
         "UnexpectedAlertPresentException",
+        "ElementNotInteractableException",
+        "StaleElementReferenceException",
     ]:
         setattr(exceptions_module, exc_name, type(exc_name, (_BaseSeleniumException,), {}))
 
@@ -36,6 +39,7 @@ def _install_selenium_stubs() -> None:
 
     class By:
         CLASS_NAME = "class_name"
+        ID = "id"
 
     by_module.By = By
 
@@ -81,6 +85,14 @@ def _install_selenium_stubs() -> None:
 
 
 def _import_link_visitor_module():
+    stubbed_module_names = [
+        "visit_n_sites_and_collect.cloud_file_storage",
+        "visit_n_sites_and_collect.configuration_for_cloud_file_storage",
+        "visit_n_sites_and_collect.last_run_recorder",
+        "visit_n_sites_and_collect.global_config",
+        "visit_n_sites_and_collect.constants",
+    ]
+    saved_modules = {name: sys.modules.get(name) for name in stubbed_module_names}
     if "loguru" not in sys.modules:
         logger = types.SimpleNamespace(
             info=lambda *args, **kwargs: None,
@@ -92,66 +104,73 @@ def _import_link_visitor_module():
 
     _install_selenium_stubs()
 
-    class _DummyDriver:
-        def implicitly_wait(self, *_args, **_kwargs):
-            return None
+    try:
+        class _DummyDriver:
+            def implicitly_wait(self, *_args, **_kwargs):
+                return None
 
-    _install_stub_module(
-        "undetected_chromedriver",
-        Chrome=lambda *args, **kwargs: _DummyDriver(),
-    )
+        _install_stub_module(
+            "undetected_chromedriver",
+            Chrome=lambda *args, **kwargs: _DummyDriver(),
+        )
 
-    class _StubCloudFileStorage:
-        pass
+        class _StubCloudFileStorage:
+            pass
 
-    class _StubConfigurationForCloudFileStorage:
-        def has_valid_cloud_file_storage_config(self) -> bool:
-            return False
+        class _StubConfigurationForCloudFileStorage:
+            def has_valid_cloud_file_storage_config(self) -> bool:
+                return False
 
-    class _StubLastRunRecorder:
-        def prepare_visit(self, *_args, **_kwargs):
-            return None
+        class _StubLastRunRecorder:
+            def prepare_visit(self, *_args, **_kwargs):
+                return None
 
-        def finish_visit(self, *_args, **_kwargs):
-            return None
+            def finish_visit(self, *_args, **_kwargs):
+                return None
 
-    class _StubGlobalConfigIR:
-        def __init__(self, raw_config):
-            self.raw_config = raw_config
+        class _StubGlobalConfigIR:
+            def __init__(self, raw_config):
+                self.raw_config = raw_config
 
-    class _StubConstants:
-        data_dir_path = "."
+        class _StubConstants:
+            data_dir_path = "."
 
-    _install_stub_module(
-        "src.visit_n_sites_and_collect.cloud_file_storage",
-        CloudFileStorage=_StubCloudFileStorage,
-    )
-    _install_stub_module(
-        "src.visit_n_sites_and_collect.configuration_for_cloud_file_storage",
-        ConfigurationForCloudFileStorage=_StubConfigurationForCloudFileStorage,
-    )
-    _install_stub_module(
-        "src.visit_n_sites_and_collect.last_run_recorder",
-        LastRunRecorder=_StubLastRunRecorder,
-    )
-    _install_stub_module(
-        "src.visit_n_sites_and_collect.global_config",
-        GlobalConfigIR=_StubGlobalConfigIR,
-    )
-    _install_stub_module(
-        "src.visit_n_sites_and_collect.constants",
-        Constants=_StubConstants,
-    )
+        _install_stub_module(
+            "visit_n_sites_and_collect.cloud_file_storage",
+            CloudFileStorage=_StubCloudFileStorage,
+        )
+        _install_stub_module(
+            "visit_n_sites_and_collect.configuration_for_cloud_file_storage",
+            ConfigurationForCloudFileStorage=_StubConfigurationForCloudFileStorage,
+        )
+        _install_stub_module(
+            "visit_n_sites_and_collect.last_run_recorder",
+            LastRunRecorder=_StubLastRunRecorder,
+        )
+        _install_stub_module(
+            "visit_n_sites_and_collect.global_config",
+            GlobalConfigIR=_StubGlobalConfigIR,
+        )
+        _install_stub_module(
+            "visit_n_sites_and_collect.constants",
+            Constants=_StubConstants,
+        )
 
-    project_root = pathlib.Path(__file__).resolve().parents[1]
-    module_path = project_root / "src" / "visit_n_sites_and_collect" / "link_visitor.py"
-    spec = importlib.util.spec_from_file_location(
-        "tests.link_visitor_delete_under_test", module_path
-    )
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+        project_root = pathlib.Path(__file__).resolve().parents[1]
+        module_path = project_root / "src" / "visit_n_sites_and_collect" / "link_visitor.py"
+        spec = importlib.util.spec_from_file_location(
+            "tests.link_visitor_delete_under_test", module_path
+        )
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = module
+        spec.loader.exec_module(module)
+        return module
+    finally:
+        for name, saved in saved_modules.items():
+            if saved is None:
+                sys.modules.pop(name, None)
+            else:
+                sys.modules[name] = saved
 
 
 class TestVisitedCampaignLinkControllerDeleteAll(unittest.TestCase):
@@ -197,4 +216,3 @@ class TestVisitedCampaignLinkControllerDeleteAll(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

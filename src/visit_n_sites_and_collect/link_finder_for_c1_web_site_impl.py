@@ -5,9 +5,11 @@ from bs4 import BeautifulSoup
 from loguru import logger
 import requests
 
-from src.visit_n_sites_and_collect.link_finder_impl_base import LinkFinderImplBase
-from src.visit_n_sites_and_collect.publisher import PublisherController
-from src.visit_n_sites_and_collect.article_link_to_campaign_link_cache import ArticleLinkToCampaignLinkCache
+from visit_n_sites_and_collect.link_finder_impl_base import LinkFinderImplBase
+from visit_n_sites_and_collect.publisher import PublisherController
+from visit_n_sites_and_collect.article_link_to_campaign_link_cache import (
+    ArticleLinkToCampaignLinkCache,
+)
 
 
 class LinkFinderForC1WebSiteImpl(LinkFinderImplBase):

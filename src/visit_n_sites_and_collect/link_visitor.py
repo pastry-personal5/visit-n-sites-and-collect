@@ -14,11 +14,13 @@ from selenium.webdriver.support.ui import WebDriverWait
 import shutil
 import undetected_chromedriver as UC
 
-from src.visit_n_sites_and_collect.cloud_file_storage import CloudFileStorage
-from src.visit_n_sites_and_collect.configuration_for_cloud_file_storage import ConfigurationForCloudFileStorage
-from src.visit_n_sites_and_collect.last_run_recorder import LastRunRecorder
-from src.visit_n_sites_and_collect.global_config import GlobalConfigIR
-from src.visit_n_sites_and_collect.constants import Constants
+from visit_n_sites_and_collect.cloud_file_storage import CloudFileStorage
+from visit_n_sites_and_collect.configuration_for_cloud_file_storage import (
+    ConfigurationForCloudFileStorage,
+)
+from visit_n_sites_and_collect.last_run_recorder import LastRunRecorder
+from visit_n_sites_and_collect.global_config import GlobalConfigIR
+from visit_n_sites_and_collect.constants import Constants
 
 
 class VisitedCampaignLinkControllerBase:
@@ -338,7 +340,8 @@ def create_link_visitor_client_context_with_selenium(nid, npw) -> LinkVisitorCli
     return client_context
 
 
-def wait_for_page_load(driver):
+def wait_for_page_load(driver, timeout_sec: int = 180) -> None:
+    deadline = time.monotonic() + timeout_sec
     while True:
         try:
             title = driver.title
@@ -354,6 +357,8 @@ def wait_for_page_load(driver):
                 break
         except selenium.common.exceptions.NoSuchElementException:
             pass
+        if time.monotonic() >= deadline:
+            raise TimeoutError("Timed out while waiting for the login page to become ready.")
         const_time_to_sleep_in_sec = 1
         time.sleep(const_time_to_sleep_in_sec)
 
@@ -399,13 +404,21 @@ def visit_login_page(driver, nid: str, npw: str) -> bool:
     #     logger.error(f"Could not interact with login elements: {e}")
     #     return False
 
-    wait_for_page_load(driver)
+    try:
+        wait_for_page_load(driver)
+    except TimeoutError:
+        logger.error("Timed out waiting for the login flow to become ready.")
+        return False
 
     try:
         element_not_to_register_device = driver.find_element(by=By.ID, value="new.dontsave")
         if element_not_to_register_device:
             element_not_to_register_device.click()
-            wait_for_page_load(driver)
+            try:
+                wait_for_page_load(driver)
+            except TimeoutError:
+                logger.error("Timed out after dismissing the 'dontsave device' prompt.")
+                return False
     except SC.exceptions.NoSuchElementException:
         pass
     return True

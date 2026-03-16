@@ -4,6 +4,13 @@ import sys
 import tempfile
 import types
 import unittest
+import pathlib
+
+
+PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[1]
+SRC_ROOT = PROJECT_ROOT / "src"
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
 
 
 if "loguru" not in sys.modules:
@@ -57,8 +64,11 @@ if "undetected_chromedriver" not in sys.modules:
 
     sys.modules["undetected_chromedriver"] = types.SimpleNamespace(Chrome=_DummyDriver)
 
-from src.visit_n_sites_and_collect.collector_cookie import CollectorCookie, CollectorCookieController
-from src.visit_n_sites_and_collect.constants import Constants
+from visit_n_sites_and_collect.collector_cookie import (
+    CollectorCookie,
+    CollectorCookieController,
+)
+from visit_n_sites_and_collect.constants import Constants
 
 
 class TestCollectorCookieController(unittest.TestCase):

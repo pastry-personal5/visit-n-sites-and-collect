@@ -4,7 +4,7 @@ import yaml
 
 from loguru import logger
 
-from src.visit_n_sites_and_collect.constants import Constants
+from visit_n_sites_and_collect.constants import Constants
 
 
 class CollectorCookie:

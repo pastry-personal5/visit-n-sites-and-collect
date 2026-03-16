@@ -21,7 +21,7 @@ class GlobalConfigIR:
         self.raw_config = global_config_dict
 
         self._build_collector_config_ir()
-        self._build_collector_config_ir()
+        self._build_user_config_ir()
 
     def _build_collector_config_ir(self):
         self.collectors = {}
@@ -64,6 +64,8 @@ class GlobalConfigController:
                 global_config_dict = yaml.safe_load(config_file_stream)
                 global_config_ir = GlobalConfigIR()
                 global_config_ir.build_ir(global_config_dict)
+                if not self.validate(global_config_ir):
+                    sys.exit(-1)
                 return global_config_ir
         except FileNotFoundError:
             logger.error("The global_config.yaml file was not found. Please ensure the file exists in the project root directory.")
@@ -92,13 +94,13 @@ class UserConfigValidator(ConfigValidatorBase):
 
     def validate(self, global_config: GlobalConfigIR) -> bool:
         try:
-            users = global_config.config['users']
+            users = global_config.raw_config["users"]
             for user in users:
                 if "id" not in user:
                     logger.error("user id in configuration not found.")
                     return False
                 if "pw" not in user:
-                    logger.error("user id in configuration not found.")
+                    logger.error("user password in configuration not found.")
                     return False
         except KeyError:
             logger.error("users in configuration not found.")

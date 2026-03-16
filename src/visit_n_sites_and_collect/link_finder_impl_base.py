@@ -1,7 +1,7 @@
-from src.visit_n_sites_and_collect.article_link_to_campaign_link_cache import (
+from visit_n_sites_and_collect.article_link_to_campaign_link_cache import (
     ArticleLinkToCampaignLinkCache,
 )
-from src.visit_n_sites_and_collect.link_finder_filter import LinkFinderFilter
+from visit_n_sites_and_collect.link_finder_filter import LinkFinderFilter
 
 class LinkFinderImplBase:
 

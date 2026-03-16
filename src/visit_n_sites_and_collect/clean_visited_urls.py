@@ -9,11 +9,13 @@ It reads the global configuration from a file and uses it to initialize the Clou
 
 from loguru import logger
 
-from src.visit_n_sites_and_collect.global_config import GlobalConfigController, GlobalConfigIR
+from visit_n_sites_and_collect.global_config import GlobalConfigController, GlobalConfigIR
 
-from src.visit_n_sites_and_collect.cloud_file_storage import CloudFileStorage
-from src.visit_n_sites_and_collect.configuration_for_cloud_file_storage import ConfigurationForCloudFileStorage
-from src.visit_n_sites_and_collect.link_visitor import VisitedCampaignLinkController
+from visit_n_sites_and_collect.cloud_file_storage import CloudFileStorage
+from visit_n_sites_and_collect.configuration_for_cloud_file_storage import (
+    ConfigurationForCloudFileStorage,
+)
+from visit_n_sites_and_collect.link_visitor import VisitedCampaignLinkController
 
 
 class CleaningController:

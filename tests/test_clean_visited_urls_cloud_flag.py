@@ -50,6 +50,13 @@ class _StubConfigurationForCloudFileStorage:
 
 
 def _import_clean_visited_urls_module():
+    stubbed_module_names = [
+        "visit_n_sites_and_collect.cloud_file_storage",
+        "visit_n_sites_and_collect.configuration_for_cloud_file_storage",
+        "visit_n_sites_and_collect.link_visitor",
+        "visit_n_sites_and_collect.global_config",
+    ]
+    saved_modules = {name: sys.modules.get(name) for name in stubbed_module_names}
     if "loguru" not in sys.modules:
         logger = types.SimpleNamespace(
             info=lambda *args, **kwargs: None,
@@ -58,33 +65,40 @@ def _import_clean_visited_urls_module():
         )
         _install_stub_module("loguru", logger=logger)
 
-    _install_stub_module(
-        "src.visit_n_sites_and_collect.cloud_file_storage",
-        CloudFileStorage=_StubCloudFileStorage,
-    )
-    _install_stub_module(
-        "src.visit_n_sites_and_collect.configuration_for_cloud_file_storage",
-        ConfigurationForCloudFileStorage=_StubConfigurationForCloudFileStorage,
-    )
-    _install_stub_module(
-        "src.visit_n_sites_and_collect.link_visitor",
-        VisitedCampaignLinkController=_StubVisitedCampaignLinkController,
-    )
-    _install_stub_module(
-        "src.visit_n_sites_and_collect.global_config",
-        GlobalConfigController=object,
-        GlobalConfigIR=object,
-    )
+    try:
+        _install_stub_module(
+            "visit_n_sites_and_collect.cloud_file_storage",
+            CloudFileStorage=_StubCloudFileStorage,
+        )
+        _install_stub_module(
+            "visit_n_sites_and_collect.configuration_for_cloud_file_storage",
+            ConfigurationForCloudFileStorage=_StubConfigurationForCloudFileStorage,
+        )
+        _install_stub_module(
+            "visit_n_sites_and_collect.link_visitor",
+            VisitedCampaignLinkController=_StubVisitedCampaignLinkController,
+        )
+        _install_stub_module(
+            "visit_n_sites_and_collect.global_config",
+            GlobalConfigController=object,
+            GlobalConfigIR=object,
+        )
 
-    project_root = pathlib.Path(__file__).resolve().parents[1]
-    module_path = project_root / "src" / "visit_n_sites_and_collect" / "clean_visited_urls.py"
-    spec = importlib.util.spec_from_file_location(
-        "tests.clean_visited_urls_under_test", module_path
-    )
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+        project_root = pathlib.Path(__file__).resolve().parents[1]
+        module_path = project_root / "src" / "visit_n_sites_and_collect" / "clean_visited_urls.py"
+        spec = importlib.util.spec_from_file_location(
+            "tests.clean_visited_urls_under_test", module_path
+        )
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = module
+        spec.loader.exec_module(module)
+        return module
+    finally:
+        for name, saved in saved_modules.items():
+            if saved is None:
+                sys.modules.pop(name, None)
+            else:
+                sys.modules[name] = saved
 
 
 class TestCleaningControllerCloudFlagPropagation(unittest.TestCase):

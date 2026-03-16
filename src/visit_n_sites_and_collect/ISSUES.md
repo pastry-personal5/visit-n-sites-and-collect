@@ -4,7 +4,7 @@ src/visit_n_sites_and_collect/clean_visited_urls.py and link_visitor.py – Fixe
 
 src/visit_n_sites_and_collect/link_visitor.py – Fixed: delete now attempts both the plain text and gzip removal independently (using `contextlib.suppress(FileNotFoundError)`) so a missing `.txt` can’t prevent cleanup of the `.gz`.
 
-src/visit_n_sites_and_collect/link_visitor.py:37-54 – wait_for_page_load spins indefinitely with while True and no timeout. When neither the title nor the “don’t save device” element ever appears (network hiccup, page change, etc.), the script hangs forever with no escape hatch. Add a time limit and surface a clear error so the caller can retry or bail out gracefully.
+src/visit_n_sites_and_collect/link_visitor.py – Fixed: `wait_for_page_load(...)` now has a timeout and the login flow fails fast with a clear error instead of hanging forever.
 
 # Next Steps
 
