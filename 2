@@ -1,0 +1,7 @@
+#!/usr/bin/bash
+set -x
+
+SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
+ENCRYPTED_GLOBAL_CONFIG_FILE_PATH=${SCRIPT_DIR}/config/global_config.yaml.gpg
+DECRYPTED_GLOBAL_CONFIG_FILE_PATH=${SCRIPT_DIR}/config/global_config.yaml
+gpg -o ${DECRYPTED_GLOBAL_CONFIG_FILE_PATH} -d ${ENCRYPTED_GLOBAL_CONFIG_FILE_PATH}

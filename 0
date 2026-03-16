@@ -5,8 +5,5 @@ SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 ENCRYPTED_GLOBAL_CONFIG_FILE_PATH=${SCRIPT_DIR}/config/global_config.yaml.gpg
 DECRYPTED_GLOBAL_CONFIG_FILE_PATH=${SCRIPT_DIR}/config/global_config.yaml
 
-if [[ -f ${ENCRYPTED_GLOBAL_CONFIG_FILE_PATH} ]]; then
-    gpg -o ${DECRYPTED_GLOBAL_CONFIG_FILE_PATH} -d ${ENCRYPTED_GLOBAL_CONFIG_FILE_PATH}
-fi
-
-uv run --python 3.11 python -m src.visit_n_sites_and_collect.main
+gpg -o ${DECRYPTED_GLOBAL_CONFIG_FILE_PATH} -d ${ENCRYPTED_GLOBAL_CONFIG_FILE_PATH}
+rm -f ${DECRYPTED_GLOBAL_CONFIG_FILE_PATH}
