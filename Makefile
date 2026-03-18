@@ -26,10 +26,9 @@ style:
 unittest:
 	${PYTHONPATH_CLAUSE} uv run --python ${PYTHON_VERSION} python -m unittest tests/*.py
 
-regression_test:
-	${PYTHONPATH_CLAUSE} uv run --python ${PYTHON_VERSION} pytest tests/regression*.py tests/regression
+regression_test: regression_test_cloud
 
 regression_test_cloud:
-	RUN_CLOUD_STORAGE_TESTS=1 ${PYTHONPATH_CLAUSE} uv run --python ${PYTHON_VERSION} pytest tests/regression_test_cloud_file_storage.py tests/regression
+	RUN_CLOUD_STORAGE_TESTS=1 ${PYTHONPATH_CLAUSE} uv run --python ${PYTHON_VERSION} pytest tests/regression_test_cloud_file_storage.py
 
 test: unittest regression_test
