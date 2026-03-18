@@ -369,7 +369,7 @@ def visit_login_page(driver, nid: str, npw: str) -> bool:
     Returns True if login is successful, False otherwise.
     """
 
-    logger.info("Visiting login page...")
+    logger.info(f"Visiting login page... with id: {nid}")
 
     const_time_to_wait_in_sec = 16
     const_html_element_id_for_id = "id"
@@ -390,19 +390,19 @@ def visit_login_page(driver, nid: str, npw: str) -> bool:
 
     try:
         element_for_id = driver.find_element(by=By.ID, value=const_html_element_id_for_id)
-    #     element_for_password = driver.find_element(by=By.ID, value=const_html_element_id_for_password)
-    #     element_for_submission = driver.find_element(by=By.ID, value=const_html_element_id_for_submission)
+        element_for_password = driver.find_element(by=By.ID, value=const_html_element_id_for_password)
+        element_for_submission = driver.find_element(by=By.ID, value=const_html_element_id_for_submission)
     except SC.exceptions.NoSuchElementException as e:
         logger.error(f"Required elements for login not found: {e}")
         return False
 
-    # try:
-    #     # element_for_id.send_keys(nid)
-    #     # element_for_password.send_keys(npw)
-    #     # element_for_submission.click()
-    # except SC.exceptions.ElementNotInteractableException as e:
-    #     logger.error(f"Could not interact with login elements: {e}")
-    #     return False
+    try:
+        element_for_id.send_keys(nid)
+        element_for_password.send_keys(npw)
+        element_for_submission.click()
+    except SC.exceptions.ElementNotInteractableException as e:
+        logger.error(f"Could not interact with login elements: {e}")
+        return False
 
     try:
         wait_for_page_load(driver)
