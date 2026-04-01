@@ -21,7 +21,8 @@ class WebBrowserClient():
 
     def prepare(self) -> None:
         try:
-            self.driver = UC.Chrome()
+            from webdriver_manager.chrome import ChromeDriverManager
+            self.driver = UC.Chrome(driver_executable_path=ChromeDriverManager().install())
             self.driver.implicitly_wait(0.5)
         except WebDriverException as e:
             logger.error("Failed to initialize Chrome WebDriver.")

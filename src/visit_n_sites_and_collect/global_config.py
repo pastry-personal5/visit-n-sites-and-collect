@@ -102,6 +102,9 @@ class UserConfigValidator(ConfigValidatorBase):
                 if "pw" not in user:
                     logger.error("user password in configuration not found.")
                     return False
+                if "flag_input_id_and_password_at_login" not in user:
+                    logger.error("flag_input_id_and_password_at_login in configuration not found.")
+                    return False
         except KeyError:
             logger.error("users in configuration not found.")
             return False

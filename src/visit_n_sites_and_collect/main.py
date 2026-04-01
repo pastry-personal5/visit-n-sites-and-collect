@@ -24,6 +24,7 @@ from visit_n_sites_and_collect.link_finder_for_d1_web_site_impl import (
 from visit_n_sites_and_collect.link_visitor import LinkVisitor
 from visit_n_sites_and_collect.global_config import GlobalConfigController, GlobalConfigIR
 from visit_n_sites_and_collect.link_finder_impl_base import LinkFinderImplBase
+from visit_n_sites_and_collect.link_visitor_user_info import LinkVisitorUserInfo
 
 
 # Classes that come with a factory method pattern.
@@ -72,12 +73,11 @@ class MainController:
         # This method is a main entry point.
         users = global_config_ir.raw_config["users"]
         for user in users:
-            nid = user["id"]
-            npw = user["pw"]
+            link_visitor_user_info = LinkVisitorUserInfo(user_id=user["id"], user_pw=user["pw"], flag_input_id_and_password_at_login=user["flag_input_id_and_password_at_login"])
             # (1) Let's find.
-            set_of_campaign_links = self._find_all(nid)
+            set_of_campaign_links = self._find_all(link_visitor_user_info.user_id)
             # (2) Let's visit.
-            self._visit_all(nid, npw, set_of_campaign_links)
+            self._visit_all(link_visitor_user_info, set_of_campaign_links)
 
     def _init_with_global_config(self, global_config_ir: GlobalConfigIR):
         self.link_visitor.init_with_global_config(global_config_ir)
@@ -110,21 +110,21 @@ class MainController:
                 set_of_campaign_links.update(result)
         return set_of_campaign_links
 
-    def _visit_all(self, nid, npw, set_of_campaign_links: set[str]) -> None:
-        self.link_visitor.visit_all(nid, npw, set_of_campaign_links)
+    def _visit_all(self, link_visitor_user_info: LinkVisitorUserInfo, set_of_campaign_links: set[str]) -> None:
+        self.link_visitor.visit_all(link_visitor_user_info, set_of_campaign_links)
 
-    def _get_days_difference_since_last_run(self, nid: str) -> int:
+    def _get_days_difference_since_last_run(self, user_id: str) -> int:
         """It returns the number of days since the last run.
 
         Args:
-            nid (str): n-site ID as a string.
+            user_id (str): n-site ID as a string.
 
         Returns:
             int: The number of days as an integer.
                 One returns -1 if the date of the last run is unavailable.
         """
         last_run_recorder = LastRunRecorder()
-        date_of_last_run = last_run_recorder.read_date_of_last_run(nid)
+        date_of_last_run = last_run_recorder.read_date_of_last_run(user_id)
         if date_of_last_run is not None:
             today = datetime.date.today()
             days = (today - date_of_last_run).days

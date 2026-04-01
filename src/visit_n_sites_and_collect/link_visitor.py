@@ -21,6 +21,7 @@ from visit_n_sites_and_collect.configuration_for_cloud_file_storage import (
 from visit_n_sites_and_collect.last_run_recorder import LastRunRecorder
 from visit_n_sites_and_collect.global_config import GlobalConfigIR
 from visit_n_sites_and_collect.constants import Constants
+from visit_n_sites_and_collect.link_visitor_user_info import LinkVisitorUserInfo
 
 
 class VisitedCampaignLinkControllerBase:
@@ -235,36 +236,35 @@ class LinkVisitor:
         self.visited_campaign_link_recorder.init_with_cloud_file_storage(self.configuration_for_cloud_file_storage, self.cloud_file_storage)
         self.visited_campaign_link_recorder.set_use_cloud_file_storage(self.flag_to_use_cloud_file_storage)
 
-    def visit_all(self, nid, npw, set_of_campaign_links: set[str]) -> None:
+    def visit_all(self, link_visitor_user_info: LinkVisitorUserInfo, set_of_campaign_links: set[str]) -> None:
         # It creates a Naver session and visit campaign links.
         # 적립 확인 링크 - https://new-m.pay.naver.com/pointshistory/list?category=all
-        logger.info(f"Creating a Naver session and visit pages with ID: ({nid}), if needed.")
+        logger.info(f"Creating a Naver session and visit pages with ID: ({link_visitor_user_info.user_id}), if needed.")
         client_context = None
 
         # Reset this.
-        self.visited_campaign_link_recorder.reset_with_nid(nid)
+        self.visited_campaign_link_recorder.reset_with_nid(link_visitor_user_info.user_id)
 
-        self._prepare_visit(nid)
-        client_context = self._visit(set_of_campaign_links, client_context, nid, npw)
-        self._finish_visit(nid)
+        self._prepare_visit(link_visitor_user_info.user_id)
+        client_context = self._visit(set_of_campaign_links, client_context, link_visitor_user_info)
+        self._finish_visit(link_visitor_user_info.user_id)
 
         if client_context:
             client_context.clean_up()
 
-    def _prepare_visit(self, nid: str) -> None:
+    def _prepare_visit(self, user_id: str) -> None:
         self.visited_campaign_link_recorder.prepare_visit()
-        self.last_run_recorder.prepare_visit(nid)
+        self.last_run_recorder.prepare_visit(user_id)
 
-    def _finish_visit(self, nid: str) -> None:
+    def _finish_visit(self, user_id: str) -> None:
         self.visited_campaign_link_recorder.finish_visit()
-        self.last_run_recorder.finish_visit(nid)
+        self.last_run_recorder.finish_visit(user_id)
 
     def _visit(
         self,
         set_of_campaign_links,
         client_context,
-        nid,
-        npw,
+        link_visitor_user_info: LinkVisitorUserInfo
     ):
         for campaign_link in set_of_campaign_links:
             logger.info(f"Campaign link to visit: {campaign_link}")
@@ -277,7 +277,7 @@ class LinkVisitor:
                 continue  # Skip already visited links
             try:
                 logger.info(f"Visiting a campaign link: {campaign_link}")
-                client_context = lazy_init_client_context_if_needed(client_context, nid, npw)
+                client_context = lazy_init_client_context_if_needed(client_context, link_visitor_user_info)
                 if not client_context:
                     return
                 driver = client_context.driver
@@ -314,16 +314,23 @@ class LinkVisitor:
         return client_context
 
 
-
-def create_link_visitor_client_context_with_selenium(nid, npw) -> LinkVisitorClientContext | None:
+def create_link_visitor_client_context_with_selenium(link_visitor_user_info: LinkVisitorUserInfo) -> LinkVisitorClientContext | None:
     """
     Create a LinkVisitorClientContext using Selenium with undetected-chromedriver.
     Returns the created LinkVisitorClientContext if successful, None otherwise.
     """
+
+    nid = link_visitor_user_info.user_id
+    npw = link_visitor_user_info.user_pw
+
     try:
-        driver = UC.Chrome()
+        from webdriver_manager.chrome import ChromeDriverManager
+        driver = UC.Chrome(driver_executable_path=ChromeDriverManager().install())
     except selenium.common.exceptions.SessionNotCreatedException as e:
         logger.error(f"Selenium session could not be created. Please ensure that the Chrome browser is installed and compatible with the undetected-chromedriver version being used. Error details: {e}")
+        return None
+    except selenium.common.exceptions.WebDriverException as e:
+        logger.error(f"WebDriverException occurred while creating Selenium driver: {e}")
         return None
 
     driver.implicitly_wait(0.5)
@@ -331,7 +338,7 @@ def create_link_visitor_client_context_with_selenium(nid, npw) -> LinkVisitorCli
     client_context = LinkVisitorClientContext()
     client_context.driver = driver
 
-    login_result = visit_login_page(driver, nid, npw)
+    login_result = visit_login_page(driver, nid, npw, link_visitor_user_info.flag_input_id_and_password_at_login)
     if not login_result:
         logger.error(f"Failed to log in with ID: {nid}. Please check your credentials.")
         client_context.clean_up()
@@ -340,7 +347,7 @@ def create_link_visitor_client_context_with_selenium(nid, npw) -> LinkVisitorCli
     return client_context
 
 
-def wait_for_page_load(driver, timeout_sec: int = 180) -> None:
+def wait_for_page_load(driver, timeout_sec: int = 3 * 60 * 60) -> None:
     deadline = time.monotonic() + timeout_sec
     while True:
         try:
@@ -363,7 +370,7 @@ def wait_for_page_load(driver, timeout_sec: int = 180) -> None:
         time.sleep(const_time_to_sleep_in_sec)
 
 
-def visit_login_page(driver, nid: str, npw: str) -> bool:
+def visit_login_page(driver, nid: str, npw: str, flag_input_id_and_password_at_login: bool) -> bool:
     """
     Visit the login page and perform login using the provided credentials.
     Returns True if login is successful, False otherwise.
@@ -396,13 +403,15 @@ def visit_login_page(driver, nid: str, npw: str) -> bool:
         logger.error(f"Required elements for login not found: {e}")
         return False
 
-    try:
-        element_for_id.send_keys(nid)
-        element_for_password.send_keys(npw)
-        element_for_submission.click()
-    except SC.exceptions.ElementNotInteractableException as e:
-        logger.error(f"Could not interact with login elements: {e}")
-        return False
+    # If the flag is set to True, input the ID and password. Otherwise, assume that the user will input them manually.
+    if flag_input_id_and_password_at_login:
+        try:
+            element_for_id.send_keys(nid)
+            element_for_password.send_keys(npw)
+            element_for_submission.click()
+        except SC.exceptions.ElementNotInteractableException as e:
+            logger.error(f"Could not interact with login elements: {e}")
+            return False
 
     try:
         wait_for_page_load(driver)
@@ -424,15 +433,15 @@ def visit_login_page(driver, nid: str, npw: str) -> bool:
     return True
 
 
-def create_link_visitor_client_context(nid, npw):
-    return create_link_visitor_client_context_with_selenium(nid, npw)
+def create_link_visitor_client_context(link_visitor_user_info: LinkVisitorUserInfo):
+    return create_link_visitor_client_context_with_selenium(link_visitor_user_info)
 
 
-def lazy_init_client_context_if_needed(client_context, nid, npw):
+def lazy_init_client_context_if_needed(client_context, link_visitor_user_info: LinkVisitorUserInfo):
     if client_context:
         return client_context
-    client_context = create_link_visitor_client_context(nid, npw)
+    client_context = create_link_visitor_client_context(link_visitor_user_info)
     if not client_context:
-        logger.error(f"Could not sign in with an ID: {nid}")
+        logger.error(f"Could not sign in with an ID: {link_visitor_user_info.user_id}")
         return None
     return client_context
