@@ -1,22 +1,29 @@
+import time
 from typing import List
 from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 from loguru import logger
 import requests
+import selenium
 
 from visit_n_sites_and_collect.link_finder_impl_base import LinkFinderImplBase
 from visit_n_sites_and_collect.publisher import PublisherController
 from visit_n_sites_and_collect.article_link_to_campaign_link_cache import (
     ArticleLinkToCampaignLinkCache,
 )
+from visit_n_sites_and_collect.web_browser_client import WebBrowserClient
 
 
 class LinkFinderForC1WebSiteImpl(LinkFinderImplBase):
 
-    def __init__(
-        self, article_link_to_campaign_link_cache: ArticleLinkToCampaignLinkCache):
+    def __init__(self, article_link_to_campaign_link_cache: ArticleLinkToCampaignLinkCache):
         super().__init__(article_link_to_campaign_link_cache)
+        self.web_browser_client = WebBrowserClient()
+        self.web_browser_client.prepare()
+
+    def cleanup(self) -> None:
+        self.web_browser_client.cleanup()
 
     def get_publisher_meta(self):
         target_base_url_list = [
@@ -48,21 +55,21 @@ class LinkFinderForC1WebSiteImpl(LinkFinderImplBase):
         logger.info(f"Visiting {publisher_link} ...")
 
         try:
-            const_timeout_in_seconds = 16
-            response = requests.get(publisher_link, timeout=const_timeout_in_seconds)
-            response.raise_for_status()
-        except requests.exceptions.ConnectionError:
+            if not self.web_browser_client.visit(publisher_link):
+                logger.error(f"Failed to visit {publisher_link}")
+                return []
+            time_to_wait_in_sec = 1
+            time.sleep(time_to_wait_in_sec)
+            res = self.web_browser_client.get_page_source()
+            soup = BeautifulSoup(res, "html.parser")
+        except selenium.common.exceptions.WebDriverException as e:
+            logger.error(f"Selenium WebDriverException while processing publisher link: {publisher_link}")
+            logger.error(e)
             return []
-        except requests.exceptions.Timeout:
-            logger.warning(f"Timeout when getting the link: {publisher_link}")
+        except Exception as e:
+            logger.error(f"Unexpected exception while processing publisher link: {publisher_link}")
+            logger.error(e)
             return []
-        except requests.exceptions.HTTPError as http_err:
-            logger.warning(f"HTTP error occurred when getting the link: {publisher_link} - {http_err}")
-            return []
-        except requests.exceptions.RequestException as req_err:
-            logger.warning(f"Request exception occurred when getting the link: {publisher_link} - {req_err}")
-            return []
-        soup = BeautifulSoup(response.text, "html.parser")
 
         list_of_article_elements = soup.find_all("span", class_="list_subject")
         partial_article_links = []
@@ -89,26 +96,27 @@ class LinkFinderForC1WebSiteImpl(LinkFinderImplBase):
         return campaign_links
 
     def _get_campaign_links_from_article(self, article_link: str) -> List[str]:
-        logger.info(f"Visiting {article_link} ...")
-        article_campaign_links = []
-        try:
-            const_timeout_in_seconds = 16
-            response = requests.get(article_link, timeout=const_timeout_in_seconds)
-            response.raise_for_status()
-        except requests.exceptions.ConnectionError:
-            logger.warning(f"Could not get the link: {article_link}")
-            return []
-        except requests.exceptions.Timeout:
-            logger.warning(f"Timeout when getting the link: {article_link}")
-            return []
-        except requests.exceptions.HTTPError as http_err:
-            logger.warning(f"HTTP error occurred when getting the link: {article_link} - {http_err}")
-            return []
-        except requests.exceptions.RequestException as req_err:
-            logger.warning(f"Request exception occurred when getting the link: {article_link} - {req_err}")
-            return []
 
-        inner_soup = BeautifulSoup(response.text, "html.parser")
+        article_campaign_links = []
+        inner_soup = None
+
+        logger.info(f"Visiting {article_link} ...")
+        try:
+            if not self.web_browser_client.visit(article_link):
+                logger.error(f"Failed to visit {article_link}")
+                return []
+            time_to_wait_in_sec = 1
+            time.sleep(time_to_wait_in_sec)
+            res = self.web_browser_client.get_page_source()
+            inner_soup = BeautifulSoup(res, "html.parser")
+        except selenium.common.exceptions.WebDriverException as e:
+            logger.error(f"Selenium WebDriverException while processing article link: {article_link}")
+            logger.error(e)
+            return []
+        except Exception as e:
+            logger.error(f"Unexpected exception while processing article link: {article_link}")
+            logger.error(e)
+            return []
 
         for a_tag in inner_soup.find_all("a", href=True):
             campaign_link = a_tag["href"]
