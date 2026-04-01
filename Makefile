@@ -21,7 +21,7 @@ shellcheck:
 	shellcheck 1 || true
 
 style:
-	pycodestyle --max-line-length=${PYCODESTYLE_MAX_LINE_LENGTH} ${SOURCE_CODE_PATH}/*.py || true
+	${PYTHONPATH_CLAUSE} uv run --python ${PYTHON_VERSION} --with pycodestyle pycodestyle --max-line-length=${PYCODESTYLE_MAX_LINE_LENGTH} ${SOURCE_CODE_PATH}/*.py || true
 
 unittest:
 	${PYTHONPATH_CLAUSE} uv run --python ${PYTHON_VERSION} python -m unittest tests/*.py
