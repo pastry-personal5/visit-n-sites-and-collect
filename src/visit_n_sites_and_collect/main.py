@@ -10,6 +10,7 @@ Please beware of file encoding.
 
 from abc import ABC, abstractmethod
 import datetime
+import typing
 
 from visit_n_sites_and_collect.article_link_to_campaign_link_cache import (
     ArticleLinkToCampaignLinkCache,
@@ -67,30 +68,40 @@ class MainController:
     def cleanup(self):
         for link_finder in self.link_finders:
             link_finder.cleanup()
+        self.link_finders.clear()
 
     def find_and_visit_all_with_global_config(self, global_config_ir: GlobalConfigIR):
-        self._init_with_global_config(global_config_ir)
-        # This method is a main entry point.
-        users = global_config_ir.raw_config["users"]
-        for user in users:
-            link_visitor_user_info = LinkVisitorUserInfo(user_id=user["id"], user_pw=user["pw"], flag_input_id_and_password_at_login=user["flag_input_id_and_password_at_login"])
-            # (1) Let's find.
-            set_of_campaign_links = self._find_all(link_visitor_user_info.user_id)
-            # (2) Let's visit.
-            self._visit_all(link_visitor_user_info, set_of_campaign_links)
+        try:
+            self._init_with_global_config(global_config_ir)
+            # This method is a main entry point.
+            users = global_config_ir.raw_config["users"]
+            for user in users:
+                link_visitor_user_info = LinkVisitorUserInfo(user_id=user["id"], user_pw=user["pw"], flag_input_id_and_password_at_login=user["flag_input_id_and_password_at_login"])
+                # (1) Let's find.
+                set_of_campaign_links = self._find_all(link_visitor_user_info.user_id)
+                # (2) Let's visit.
+                self._visit_all(link_visitor_user_info, set_of_campaign_links)
+        finally:
+            self.cleanup()
+
+    def _init_and_get_link_finder_factories(self) -> typing.Dict[str, LinkFinderFactory]:
+        return {
+            "c1": LinkFinderForC1WebSiteFactory(),
+            "d1": LinkFinderForD1WebSiteFactory(),
+        }
 
     def _init_with_global_config(self, global_config_ir: GlobalConfigIR):
         self.link_visitor.init_with_global_config(global_config_ir)
+        link_finder_factories_dict = self._init_and_get_link_finder_factories()
 
         # Initialize link finders.
         link_finder_factories = []
-        collectors = global_config_ir.collectors
-        for c in collectors:
-            if c in collectors and collectors[c]["enabled"] is True:
-                if c == "c1":
-                    link_finder_factories.append(LinkFinderForC1WebSiteFactory())
-                elif c == "d1":
-                    link_finder_factories.append(LinkFinderForD1WebSiteFactory())
+        finders_from_config = global_config_ir.finders
+        for c in finders_from_config:
+            if c in finders_from_config and finders_from_config[c]["enabled"] is True:
+                if c not in link_finder_factories_dict:
+                    raise ValueError(f"Unexpected finder: {c}")
+                link_finder_factories.append(link_finder_factories_dict[c])
         for link_finder_creator in link_finder_factories:
             link_finder = link_finder_creator.build_link_finder(
                 self.article_link_to_campaign_link_cache)
@@ -137,7 +148,6 @@ def main() -> None:
     global_config_controller = GlobalConfigController()
     global_config = global_config_controller.read_global_config()
     main_controller.find_and_visit_all_with_global_config(global_config)
-    main_controller.cleanup()
 
 
 if __name__ == "__main__":

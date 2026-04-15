@@ -241,16 +241,22 @@ class LinkVisitor:
         # 적립 확인 링크 - https://new-m.pay.naver.com/pointshistory/list?category=all
         logger.info(f"Creating a Naver session and visit pages with ID: ({link_visitor_user_info.user_id}), if needed.")
         client_context = None
+        flag_prepared = False
 
         # Reset this.
         self.visited_campaign_link_recorder.reset_with_nid(link_visitor_user_info.user_id)
 
-        self._prepare_visit(link_visitor_user_info.user_id)
-        client_context = self._visit(set_of_campaign_links, client_context, link_visitor_user_info)
-        self._finish_visit(link_visitor_user_info.user_id)
-
-        if client_context:
-            client_context.clean_up()
+        try:
+            self._prepare_visit(link_visitor_user_info.user_id)
+            flag_prepared = True
+            client_context = self._visit(set_of_campaign_links, client_context, link_visitor_user_info)
+        finally:
+            try:
+                if flag_prepared:
+                    self._finish_visit(link_visitor_user_info.user_id)
+            finally:
+                if client_context:
+                    client_context.clean_up()
 
     def _prepare_visit(self, user_id: str) -> None:
         self.visited_campaign_link_recorder.prepare_visit()
@@ -306,10 +312,15 @@ class LinkVisitor:
                         pass
 
                 self.visited_campaign_link_recorder.record_visit(campaign_link)
+                WebDriverWait(driver, 5).until(lambda d: True)  # Acts as a non-blocking sleep
             except SC.exceptions.UnexpectedAlertPresentException:
                 logger.warning(f"Unexpected alert on {campaign_link}, skipping...")
-
-            WebDriverWait(driver, 5).until(lambda d: True)  # Acts as a non-blocking sleep
+            except Exception:
+                if client_context:
+                    client_context.clean_up()
+                    client_context = None
+                logger.exception(f"Unexpected exception while visiting a campaign link: {campaign_link}")
+                raise
 
         return client_context
 
@@ -370,7 +381,12 @@ def wait_for_page_load(driver, timeout_sec: int = 3 * 60 * 60) -> None:
         time.sleep(const_time_to_sleep_in_sec)
 
 
-def visit_login_page(driver, nid: str, npw: str, flag_input_id_and_password_at_login: bool) -> bool:
+def visit_login_page(
+    driver,
+    nid: str,
+    npw: str,
+    flag_input_id_and_password_at_login: bool = True,
+) -> bool:
     """
     Visit the login page and perform login using the provided credentials.
     Returns True if login is successful, False otherwise.

@@ -14,21 +14,21 @@ class GlobalConfigIR:
 
     def __init__(self):
         self.raw_config = {}
-        self.collectors = {}
+        self.finders = {}
         self.users = {}
 
     def build_ir(self, global_config_dict: dict):
         self.raw_config = global_config_dict
 
-        self._build_collector_config_ir()
+        self._build_finder_config_ir()
         self._build_user_config_ir()
 
-    def _build_collector_config_ir(self):
-        self.collectors = {}
-        for c in self.raw_config["collectors"]:
-            collector_name = c["name"]
+    def _build_finder_config_ir(self):
+        self.finders = {}
+        for c in self.raw_config["finders"]:
+            finder_name = c["name"]
             flag_enabled = bool(c["enabled"])
-            self.collectors[collector_name] = {
+            self.finders[finder_name] = {
                 "enabled": flag_enabled
             }
 

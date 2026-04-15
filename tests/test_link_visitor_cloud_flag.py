@@ -92,11 +92,13 @@ def _install_selenium_stubs() -> None:
 
 def _import_link_visitor_module():
     stubbed_module_names = [
+        "visit_n_sites_and_collect",
         "visit_n_sites_and_collect.cloud_file_storage",
         "visit_n_sites_and_collect.configuration_for_cloud_file_storage",
         "visit_n_sites_and_collect.last_run_recorder",
         "visit_n_sites_and_collect.global_config",
         "visit_n_sites_and_collect.constants",
+        "visit_n_sites_and_collect.link_visitor_user_info",
     ]
     saved_modules = {name: sys.modules.get(name) for name in stubbed_module_names}
     if "loguru" not in sys.modules:
@@ -111,6 +113,7 @@ def _import_link_visitor_module():
     _install_selenium_stubs()
 
     try:
+        _install_stub_module("visit_n_sites_and_collect")
         class _DummyDriver:
             def implicitly_wait(self, *_args, **_kwargs):
                 return None
@@ -167,6 +170,10 @@ def _import_link_visitor_module():
             "visit_n_sites_and_collect.constants",
             Constants=_StubConstants,
         )
+        _install_stub_module(
+            "visit_n_sites_and_collect.link_visitor_user_info",
+            LinkVisitorUserInfo=lambda **kwargs: types.SimpleNamespace(**kwargs),
+        )
 
         project_root = pathlib.Path(__file__).resolve().parents[1]
         module_path = project_root / "src" / "visit_n_sites_and_collect" / "link_visitor.py"
@@ -189,12 +196,55 @@ class _RecorderSpy:
     def __init__(self):
         self.cloud_enabled_values = []
         self.init_calls = 0
+        self.reset_calls = []
+        self.prepare_calls = 0
+        self.finish_calls = 0
 
     def init_with_cloud_file_storage(self, *_args, **_kwargs):
         self.init_calls += 1
 
     def set_use_cloud_file_storage(self, enabled: bool) -> None:
         self.cloud_enabled_values.append(bool(enabled))
+
+    def reset_with_nid(self, nid: str) -> None:
+        self.reset_calls.append(nid)
+
+    def prepare_visit(self) -> None:
+        self.prepare_calls += 1
+
+    def finish_visit(self) -> None:
+        self.finish_calls += 1
+
+    def is_visited_campaign_link(self, _campaign_link: str) -> bool:
+        return False
+
+    def record_visit(self, _campaign_link: str) -> None:
+        return None
+
+
+class _LastRunRecorderSpy:
+    def __init__(self):
+        self.prepare_calls = []
+        self.finish_calls = []
+
+    def prepare_visit(self, user_id: str) -> None:
+        self.prepare_calls.append(user_id)
+
+    def finish_visit(self, user_id: str) -> None:
+        self.finish_calls.append(user_id)
+
+
+class _ClientContextSpy:
+    def __init__(self):
+        self.cleanup_calls = 0
+
+    def clean_up(self) -> None:
+        self.cleanup_calls += 1
+
+
+class _DriverThatRaises:
+    def get(self, _url: str) -> None:
+        raise RuntimeError("boom")
 
 
 class TestLinkVisitorCloudFlag(unittest.TestCase):
@@ -245,10 +295,67 @@ class TestLinkVisitorCloudFlag(unittest.TestCase):
         visitor.visited_campaign_link_recorder = spy
         visitor.flag_to_use_cloud_file_storage = True
 
-        result = visitor._visit(set(), None, "nid", "pw")
+        link_visitor_user_info = self.module.LinkVisitorUserInfo(
+            user_id="nid",
+            user_pw="pw",
+            flag_input_id_and_password_at_login=True,
+        )
+        result = visitor._visit(set(), None, link_visitor_user_info)
 
         self.assertIsNone(result)
         self.assertEqual(spy.cloud_enabled_values, [True])
+
+    def test_visit_method_cleans_up_client_context_on_unexpected_error(self):
+        visitor = self.module.LinkVisitor()
+        recorder = _RecorderSpy()
+        visitor.visited_campaign_link_recorder = recorder
+        client_context = _ClientContextSpy()
+        client_context.driver = _DriverThatRaises()
+        link_visitor_user_info = self.module.LinkVisitorUserInfo(
+            user_id="nid",
+            user_pw="pw",
+            flag_input_id_and_password_at_login=True,
+        )
+
+        original_lazy_init = self.module.lazy_init_client_context_if_needed
+        self.module.lazy_init_client_context_if_needed = (
+            lambda _client_context, _user_info: client_context
+        )
+        try:
+            with self.assertRaisesRegex(RuntimeError, "boom"):
+                visitor._visit(
+                    {"https://campaign.example/a"},
+                    None,
+                    link_visitor_user_info,
+                )
+        finally:
+            self.module.lazy_init_client_context_if_needed = original_lazy_init
+
+        self.assertEqual(recorder.cloud_enabled_values, [False])
+        self.assertEqual(client_context.cleanup_calls, 1)
+
+    def test_visit_all_finishes_state_when_visit_raises(self):
+        visitor = self.module.LinkVisitor()
+        recorder = _RecorderSpy()
+        last_run_recorder = _LastRunRecorderSpy()
+        visitor.visited_campaign_link_recorder = recorder
+        visitor.last_run_recorder = last_run_recorder
+        visitor._visit = lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("boom"))
+
+        link_visitor_user_info = self.module.LinkVisitorUserInfo(
+            user_id="nid",
+            user_pw="pw",
+            flag_input_id_and_password_at_login=True,
+        )
+
+        with self.assertRaisesRegex(RuntimeError, "boom"):
+            visitor.visit_all(link_visitor_user_info, {"https://campaign.example/a"})
+
+        self.assertEqual(recorder.reset_calls, ["nid"])
+        self.assertEqual(recorder.prepare_calls, 1)
+        self.assertEqual(recorder.finish_calls, 1)
+        self.assertEqual(last_run_recorder.prepare_calls, ["nid"])
+        self.assertEqual(last_run_recorder.finish_calls, ["nid"])
 
 
 if __name__ == "__main__":

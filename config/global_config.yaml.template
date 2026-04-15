@@ -8,7 +8,7 @@ users:
   - id: user3
     pw: pass3
     flag_input_id_and_password_at_login: true
-collectors:
+finders:
   - name: c1
     # true | false
     enabled: true

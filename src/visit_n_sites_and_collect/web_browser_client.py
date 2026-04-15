@@ -19,6 +19,7 @@ class WebBrowserClient():
             self.driver = None
 
     def cleanup(self) -> None:
+        logger.info("Cleaning up WebBrowserClient resources...")
         if self.driver:
             try:
                 self.driver.quit()

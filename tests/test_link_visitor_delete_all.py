@@ -86,11 +86,13 @@ def _install_selenium_stubs() -> None:
 
 def _import_link_visitor_module():
     stubbed_module_names = [
+        "visit_n_sites_and_collect",
         "visit_n_sites_and_collect.cloud_file_storage",
         "visit_n_sites_and_collect.configuration_for_cloud_file_storage",
         "visit_n_sites_and_collect.last_run_recorder",
         "visit_n_sites_and_collect.global_config",
         "visit_n_sites_and_collect.constants",
+        "visit_n_sites_and_collect.link_visitor_user_info",
     ]
     saved_modules = {name: sys.modules.get(name) for name in stubbed_module_names}
     if "loguru" not in sys.modules:
@@ -105,6 +107,7 @@ def _import_link_visitor_module():
     _install_selenium_stubs()
 
     try:
+        _install_stub_module("visit_n_sites_and_collect")
         class _DummyDriver:
             def implicitly_wait(self, *_args, **_kwargs):
                 return None
@@ -154,6 +157,10 @@ def _import_link_visitor_module():
         _install_stub_module(
             "visit_n_sites_and_collect.constants",
             Constants=_StubConstants,
+        )
+        _install_stub_module(
+            "visit_n_sites_and_collect.link_visitor_user_info",
+            LinkVisitorUserInfo=lambda **kwargs: types.SimpleNamespace(**kwargs),
         )
 
         project_root = pathlib.Path(__file__).resolve().parents[1]

@@ -21,12 +21,21 @@ class _StubLinkVisitor:
     def __init__(self):
         self.init_calls = []
         self.visit_all_calls = []
+        self.error_to_raise = None
 
     def init_with_global_config(self, global_config_ir):
         self.init_calls.append(global_config_ir)
 
-    def visit_all(self, nid, npw, set_of_campaign_links):
-        self.visit_all_calls.append((nid, npw, set(set_of_campaign_links)))
+    def visit_all(self, link_visitor_user_info, set_of_campaign_links):
+        if self.error_to_raise is not None:
+            raise self.error_to_raise
+        self.visit_all_calls.append(
+            (
+                link_visitor_user_info.user_id,
+                link_visitor_user_info.user_pw,
+                set(set_of_campaign_links),
+            )
+        )
 
 
 class _StubLastRunRecorder:
@@ -70,6 +79,7 @@ class _StubLinkFinderForD1WebSiteImpl(_StubLinkFinderBase):
 
 def _import_main_module():
     stubbed_module_names = [
+        "visit_n_sites_and_collect",
         "visit_n_sites_and_collect.article_link_to_campaign_link_cache",
         "visit_n_sites_and_collect.last_run_recorder",
         "visit_n_sites_and_collect.link_finder_for_c1_web_site_impl",
@@ -77,6 +87,7 @@ def _import_main_module():
         "visit_n_sites_and_collect.link_visitor",
         "visit_n_sites_and_collect.global_config",
         "visit_n_sites_and_collect.link_finder_impl_base",
+        "visit_n_sites_and_collect.link_visitor_user_info",
     ]
     saved_modules = {name: sys.modules.get(name) for name in stubbed_module_names}
     if "loguru" not in sys.modules:
@@ -88,6 +99,7 @@ def _import_main_module():
         _install_stub_module("loguru", logger=logger)
 
     try:
+        _install_stub_module("visit_n_sites_and_collect")
         _install_stub_module(
             "visit_n_sites_and_collect.article_link_to_campaign_link_cache",
             ArticleLinkToCampaignLinkCache=_StubArticleLinkToCampaignLinkCache,
@@ -116,6 +128,10 @@ def _import_main_module():
         _install_stub_module(
             "visit_n_sites_and_collect.link_finder_impl_base",
             LinkFinderImplBase=object,
+        )
+        _install_stub_module(
+            "visit_n_sites_and_collect.link_visitor_user_info",
+            LinkVisitorUserInfo=lambda **kwargs: types.SimpleNamespace(**kwargs),
         )
 
         project_root = pathlib.Path(__file__).resolve().parents[1]
@@ -148,7 +164,7 @@ class TestMainController(unittest.TestCase):
         controller = self.module.MainController()
         global_config_ir = types.SimpleNamespace(
             raw_config={"campaign_link_prefixes": ["https://campaign.example/"]},
-            collectors={
+            finders={
                 "c1": {"enabled": True},
                 "d1": {"enabled": False},
             },
@@ -184,11 +200,19 @@ class TestMainController(unittest.TestCase):
             raw_config={
                 "campaign_link_prefixes": ["https://campaign.example/"],
                 "users": [
-                    {"id": "user1", "pw": "pw1"},
-                    {"id": "user2", "pw": "pw2"},
+                    {
+                        "id": "user1",
+                        "pw": "pw1",
+                        "flag_input_id_and_password_at_login": True,
+                    },
+                    {
+                        "id": "user2",
+                        "pw": "pw2",
+                        "flag_input_id_and_password_at_login": True,
+                    },
                 ],
             },
-            collectors={
+            finders={
                 "c1": {"enabled": True},
                 "d1": {"enabled": True},
             },
@@ -225,6 +249,39 @@ class TestMainController(unittest.TestCase):
                 ),
             ],
         )
+
+    def test_find_and_visit_all_with_global_config_cleans_up_collectors_on_error(self):
+        controller = self.module.MainController()
+        controller.link_visitor.error_to_raise = RuntimeError("boom")
+        global_config_ir = types.SimpleNamespace(
+            raw_config={
+                "campaign_link_prefixes": ["https://campaign.example/"],
+                "users": [
+                    {
+                        "id": "user1",
+                        "pw": "pw1",
+                        "flag_input_id_and_password_at_login": True,
+                    }
+                ],
+            },
+            finders={
+                "c1": {"enabled": True},
+                "d1": {"enabled": True},
+            },
+        )
+
+        with self.assertRaisesRegex(RuntimeError, "boom"):
+            controller.find_and_visit_all_with_global_config(global_config_ir)
+
+        self.assertEqual(
+            [finder.cleanup_calls for finder in _StubLinkFinderForC1WebSiteImpl.instances],
+            [1],
+        )
+        self.assertEqual(
+            [finder.cleanup_calls for finder in _StubLinkFinderForD1WebSiteImpl.instances],
+            [1],
+        )
+        self.assertEqual(controller.link_finders, [])
 
 
 if __name__ == "__main__":
