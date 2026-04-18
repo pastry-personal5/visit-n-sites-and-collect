@@ -114,9 +114,16 @@ class VisitedCampaignLinkController(VisitedCampaignLinkControllerBase):
                 shutil.copyfileobj(f_in, f_out)
 
     def _decompress_file(self, input_file, output_file):
-        with gzip.open(input_file, "rb") as f_in:
-            with open(output_file, "wb") as f_out:
-                shutil.copyfileobj(f_in, f_out)
+        temp_output_file = f"{output_file}.tmp"
+        try:
+            with gzip.open(input_file, "rb") as f_in:
+                with open(temp_output_file, "wb") as f_out:
+                    shutil.copyfileobj(f_in, f_out)
+            os.replace(temp_output_file, output_file)
+        except Exception:
+            with suppress(FileNotFoundError):
+                os.remove(temp_output_file)
+            raise
 
     def _read_visited_campaign_links_from_file(self):
         # Prepare
@@ -143,6 +150,11 @@ class VisitedCampaignLinkController(VisitedCampaignLinkControllerBase):
         except FileNotFoundError:
             logger.warning(f"File not found: ({gzipped_file_path})")
             # Here, let's do not return. That means trying to read a plain text file.
+        except (gzip.BadGzipFile, EOFError, OSError) as e:
+            logger.warning(
+                f"Could not decompress visited links archive ({gzipped_file_path}): {e}"
+            )
+            # Fall back to the plain text file if it is available.
 
         # Read visited URLs from file
         try:

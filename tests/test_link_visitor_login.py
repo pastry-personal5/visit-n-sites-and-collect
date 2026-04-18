@@ -107,6 +107,8 @@ def _import_link_visitor_module():
             exception=lambda *args, **kwargs: None,
         )
         _install_stub_module("loguru", logger=logger)
+    elif not hasattr(sys.modules["loguru"].logger, "exception"):
+        sys.modules["loguru"].logger.exception = lambda *args, **kwargs: None
 
     _install_selenium_stubs()
 
@@ -182,6 +184,7 @@ class _FakeDriver:
     def __init__(self, elements):
         self.elements = elements
         self.get_calls = []
+        self.quit_calls = 0
 
     def get(self, url):
         self.get_calls.append(url)
@@ -191,6 +194,12 @@ class _FakeDriver:
         if key not in self.elements:
             raise self._no_such_element(f"Missing element: {key}")
         return self.elements[key]
+
+    def implicitly_wait(self, *_args, **_kwargs):
+        return None
+
+    def quit(self):
+        self.quit_calls += 1
 
 
 class TestVisitLoginPage(unittest.TestCase):
@@ -247,6 +256,63 @@ class TestVisitLoginPage(unittest.TestCase):
         result = self.module.visit_login_page(driver, "user1", "pw1")
 
         self.assertFalse(result)
+
+    def test_visit_login_page_returns_false_when_second_page_wait_times_out(self):
+        field_id = _FakeElement()
+        field_password = _FakeElement()
+        submit_button = _FakeElement()
+        device_prompt = _FakeElement()
+
+        driver = _FakeDriver(
+            {
+                (self.module.By.ID, "id"): field_id,
+                (self.module.By.ID, "pw"): field_password,
+                (self.module.By.ID, "log.login"): submit_button,
+                (self.module.By.ID, "new.dontsave"): device_prompt,
+            }
+        )
+        driver._no_such_element = self.module.SC.exceptions.NoSuchElementException
+
+        call_counter = {"count": 0}
+
+        def _fake_wait_for_page_load(_driver):
+            call_counter["count"] += 1
+            if call_counter["count"] == 2:
+                raise TimeoutError("too slow")
+
+        self.module.wait_for_page_load = _fake_wait_for_page_load
+
+        result = self.module.visit_login_page(driver, "user1", "pw1")
+
+        self.assertFalse(result)
+        self.assertEqual(device_prompt.click_count, 1)
+        self.assertEqual(call_counter["count"], 2)
+
+    def test_create_link_visitor_client_context_cleans_up_driver_when_login_fails(self):
+        driver = _FakeDriver({})
+        user_info = self.module.LinkVisitorUserInfo(
+            user_id="user1",
+            user_pw="pw1",
+            flag_input_id_and_password_at_login=True,
+        )
+
+        class _ChromeDriverManager:
+            def install(self):
+                return "/tmp/chromedriver"
+
+        webdriver_manager_module = types.ModuleType("webdriver_manager")
+        webdriver_manager_chrome_module = types.ModuleType("webdriver_manager.chrome")
+        webdriver_manager_chrome_module.ChromeDriverManager = _ChromeDriverManager
+        sys.modules["webdriver_manager"] = webdriver_manager_module
+        sys.modules["webdriver_manager.chrome"] = webdriver_manager_chrome_module
+
+        self.module.UC.Chrome = lambda *args, **kwargs: driver
+        self.module.visit_login_page = lambda *_args, **_kwargs: False
+
+        result = self.module.create_link_visitor_client_context_with_selenium(user_info)
+
+        self.assertIsNone(result)
+        self.assertEqual(driver.quit_calls, 1)
 
 
 if __name__ == "__main__":

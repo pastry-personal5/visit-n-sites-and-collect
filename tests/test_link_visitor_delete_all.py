@@ -103,6 +103,8 @@ def _import_link_visitor_module():
             exception=lambda *args, **kwargs: None,
         )
         _install_stub_module("loguru", logger=logger)
+    elif not hasattr(sys.modules["loguru"].logger, "exception"):
+        sys.modules["loguru"].logger.exception = lambda *args, **kwargs: None
 
     _install_selenium_stubs()
 
@@ -219,6 +221,25 @@ class TestVisitedCampaignLinkControllerDeleteAll(unittest.TestCase):
 
         self.assertFalse(os.path.exists(txt_path))
         self.assertFalse(os.path.exists(gz_path))
+
+    def test_prepare_visit_falls_back_to_plain_text_when_gzip_is_invalid(self):
+        controller = self.module.VisitedCampaignLinkController()
+        controller.set_use_cloud_file_storage(False)
+        controller.reset_with_nid("user3")
+
+        txt_path = os.path.join(self.temp_dir.name, "visited_urls.user3.txt")
+        gz_path = os.path.join(self.temp_dir.name, "visited_urls.user3.txt.gz")
+        with open(txt_path, "w", encoding="utf-8") as f:
+            f.write("https://example.com/a\nhttps://example.com/b\n")
+        with open(gz_path, "wb") as f:
+            f.write(b"not-a-valid-gzip")
+
+        controller.prepare_visit()
+
+        self.assertEqual(
+            controller.get_visited_urls(),
+            {"https://example.com/a", "https://example.com/b"},
+        )
 
 
 if __name__ == "__main__":

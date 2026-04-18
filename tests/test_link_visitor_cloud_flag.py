@@ -109,6 +109,8 @@ def _import_link_visitor_module():
             exception=lambda *args, **kwargs: None,
         )
         _install_stub_module("loguru", logger=logger)
+    elif not hasattr(sys.modules["loguru"].logger, "exception"):
+        sys.modules["loguru"].logger.exception = lambda *args, **kwargs: None
 
     _install_selenium_stubs()
 
